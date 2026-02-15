@@ -20,10 +20,14 @@ export default function AdminDashboard() {
     participants,
     leaderboards,
     setLeaderboards,
-    coordRequests,
-    setCoordRequests,
     winners,
     setWinners,
+    useApi,
+    createEvent,
+    updateEvent,
+    updateEventStatus,
+    updateCoordinatorStatus,
+    completeEventWithWinners,
   } = useAppData();
 
   const [eventForm, setEventForm] = useState(null);
@@ -33,17 +37,33 @@ export default function AdminDashboard() {
   const pendingCoords = coordinators.filter((c) => c.status === "pending");
   const approvedCoords = coordinators.filter((c) => c.status === "approved");
 
-  const handleApproveCoord = (coordId) => {
+  const handleApproveCoord = async (coordId) => {
+    if (useApi) {
+      try {
+        await updateCoordinatorStatus(coordId, "approved");
+      } catch (err) {
+        alert(err?.message || "Failed to approve");
+      }
+      return;
+    }
     const next = coordinators.map((c) => (c.id === coordId ? { ...c, status: "approved" } : c));
     setUsers({ ...users, coordinators: next });
   };
 
-  const handleRejectCoord = (coordId) => {
+  const handleRejectCoord = async (coordId) => {
+    if (useApi) {
+      try {
+        await updateCoordinatorStatus(coordId, "rejected");
+      } catch (err) {
+        alert(err?.message || "Failed to reject");
+      }
+      return;
+    }
     const next = coordinators.map((c) => (c.id === coordId ? { ...c, status: "rejected" } : c));
     setUsers({ ...users, coordinators: next });
   };
 
-  const handleSaveEvent = (e) => {
+  const handleSaveEvent = async (e) => {
     e.preventDefault();
     const form = e.target;
     const payload = {
@@ -60,6 +80,16 @@ export default function AdminDashboard() {
       teamSize: form.teamSize.value,
       createdAt: eventForm?.createdAt || new Date().toISOString(),
     };
+    if (useApi) {
+      try {
+        if (eventForm?.id) await updateEvent(eventForm.id, payload);
+        else await createEvent(payload);
+        setEventForm(null);
+      } catch (err) {
+        alert(err?.message || "Failed to save event");
+      }
+      return;
+    }
     if (eventForm?.id) {
       setEvents(events.map((ev) => (ev.id === eventForm.id ? payload : ev)));
     } else {
@@ -68,12 +98,29 @@ export default function AdminDashboard() {
     setEventForm(null);
   };
 
-  const handleCloseEvent = (eventId) => {
+  const handleCloseEvent = async (eventId) => {
+    if (useApi) {
+      try {
+        await updateEventStatus(eventId, "closed");
+      } catch (err) {
+        alert(err?.message || "Failed to close event");
+      }
+      return;
+    }
     setEvents(events.map((e) => (e.id === eventId ? { ...e, status: "closed" } : e)));
   };
 
-  const handleCompleteEvent = (eventId) => {
+  const handleCompleteEvent = async (eventId) => {
     const lb = (leaderboards[eventId] || []).slice(0, 3).map((e) => e.participantId);
+    if (useApi) {
+      try {
+        await completeEventWithWinners(eventId, lb);
+        setReportEventId(null);
+      } catch (err) {
+        alert(err?.message || "Failed to complete event");
+      }
+      return;
+    }
     setEvents(events.map((e) => (e.id === eventId ? { ...e, status: "completed" } : e)));
     setWinners({ ...winners, [eventId]: lb });
     setReportEventId(null);

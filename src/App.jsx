@@ -4,7 +4,6 @@ import Navbar from "./components/Navbar.jsx";
 import EventDetails from "./pages/EventDetails.jsx";
 import Contact from "./pages/Contact.jsx";
 import Home from "./pages/home.jsx";
-import AboutUs from "./pages/AboutUs.jsx";
 import Events from "./pages/Events.jsx";
 import Login from "./pages/Login.jsx";
 import StudentDashboard from "./pages/StudentDashboard.jsx";
@@ -13,6 +12,7 @@ import AdminDashboard from "./pages/AdminDashboard.jsx";
 import FreeFlowParticles from "./pages/ParticleBackground.jsx";
 import { AppDataProvider } from "./context/AppData";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import DataHydrator from "./components/DataHydrator";
 
 import "./App.css";
 
@@ -31,6 +31,7 @@ const App = () => {
   return (
     <AppDataProvider>
       <AuthProvider>
+        <DataHydrator />
         <Router>
           <div className="app-wrapper">
             <div className="global-particle-bg" aria-hidden>
@@ -40,7 +41,6 @@ const App = () => {
             <div className="main-content">
               <Routes>
                 <Route path="/" element={<><Home /></>} />
-                <Route path="/about" element={<AboutUs />} />
                 <Route path="/events" element={<Events />} />
                 <Route path="/events/:id" element={<EventDetails />} />
                 <Route path="/contact" element={<Contact />} />

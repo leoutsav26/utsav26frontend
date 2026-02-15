@@ -141,7 +141,7 @@ export default function FreeFlowParticles() {
     <canvas
       ref={canvasRef}
       className="global-particle-canvas"
-      style={{ background: 'transparent' }}
+      style={{ background: 'transparent', width: '100%', height: '100%', display: 'block' }}
       aria-hidden
     />
   );

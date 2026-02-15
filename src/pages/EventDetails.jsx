@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppData } from "../context/AppData";
 import { useAuth } from "../context/AuthContext";
+import { getEventById } from "../services/eventsService";
 import { Calendar, Clock, MapPin, IndianRupee, Share2, X, Copy, Check, LogIn } from "lucide-react";
 import "./Events.css";
 
@@ -9,8 +10,9 @@ const EventDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { events, participants } = useAppData();
+  const { events, participants, useApi } = useAppData();
   const [event, setEvent] = useState(null);
+  const [eventLoaded, setEventLoaded] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -22,15 +24,19 @@ const EventDetails = () => {
     const fromContext = (events || []).find((e) => e.id === id);
     if (fromContext) {
       setEvent(fromContext);
+      setEventLoaded(true);
       return;
     }
-    fetch("/events.json")
-      .then((res) => res.json())
-      .then((data) => {
-        const found = data.find((e) => e.id === id);
-        setEvent(found);
-      });
-  }, [id, events]);
+    if (useApi && id) {
+      setEventLoaded(false);
+      getEventById(id)
+        .then((ev) => { setEvent(ev); setEventLoaded(true); })
+        .catch(() => { setEvent(null); setEventLoaded(true); });
+    } else {
+      setEvent(null);
+      setEventLoaded(true);
+    }
+  }, [id, events, useApi]);
 
   const handleRegister = () => {
     if (!user) {
@@ -81,7 +87,8 @@ const EventDetails = () => {
 
   const canNativeShare = typeof navigator !== "undefined" && !!navigator.share;
 
-  if (!event) return <div className="loading">Loading...</div>;
+  if (!eventLoaded) return <div className="loading">Loading...</div>;
+  if (!event) return <div className="event-details-page"><p className="event-not-found">Event not found.</p><button type="button" className="back-btn" onClick={() => navigate("/events")}>← Back to Events</button></div>;
 
   return (
     <div className="event-details-page">

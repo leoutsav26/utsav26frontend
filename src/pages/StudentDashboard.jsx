@@ -8,9 +8,11 @@ import "./StudentDashboard.css";
 export default function StudentDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { events, participants, winners, setParticipants } = useAppData();
+  const { events, participants, winners, setParticipants, useApi, createParticipation, deleteParticipation, createPayment } = useAppData();
   const [modal, setModal] = useState(null);
   const [paymentProof, setPaymentProof] = useState({ transactionId: "", screenshot: null });
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionError, setActionError] = useState(null);
   const winnerEventIds = useMemo(() => {
     const w = winners || {};
     return Object.keys(w).filter((eid) => (w[eid] || []).includes(user?.id));
@@ -36,8 +38,17 @@ export default function StudentDashboard() {
   const handlePaymentChoice = (payNow) => {
     if (payNow) setModal((m) => ({ ...m, step: "paynow" }));
     else {
-      addParticipant(modal.event, "pay_at_arrival", null, null);
-      setModal(null);
+      if (useApi) {
+        setActionError(null);
+        setActionLoading(true);
+        createParticipation({ eventId: modal.event.id, paymentType: "pay_at_arrival" })
+          .then(() => setModal(null))
+          .catch((err) => setActionError(err?.message || "Registration failed"))
+          .finally(() => setActionLoading(false));
+      } else {
+        addParticipant(modal.event, "pay_at_arrival", null, null);
+        setModal(null);
+      }
     }
   };
 
@@ -66,7 +77,20 @@ export default function StudentDashboard() {
     setParticipants(next);
   };
 
-  const handleUndoRegistration = (eventId) => {
+  const handleUndoRegistration = async (eventId) => {
+    const reg = getMyRegistration(eventId);
+    if (useApi && reg?.id) {
+      setActionError(null);
+      setActionLoading(true);
+      try {
+        await deleteParticipation(reg.id, eventId);
+      } catch (err) {
+        setActionError(err?.message || "Failed to undo registration");
+      } finally {
+        setActionLoading(false);
+      }
+      return;
+    }
     const prev = participants || {};
     const list = (prev[eventId] || []).filter((p) => p.studentId !== user.id);
     const next = { ...prev, [eventId]: list.length ? list : undefined };
@@ -74,16 +98,31 @@ export default function StudentDashboard() {
     setParticipants(next);
   };
 
-  const handlePayNowSubmit = (e) => {
+  const handlePayNowSubmit = async (e) => {
     e.preventDefault();
     if (!modal?.event) return;
     if (!paymentProof.transactionId.trim() || !paymentProof.screenshot) return;
-    addParticipant(
-      modal.event,
-      "pay_now",
-      paymentProof.transactionId.trim(),
-      paymentProof.screenshot
-    );
+    if (useApi) {
+      setActionError(null);
+      setActionLoading(true);
+      try {
+        const created = await createParticipation({
+          eventId: modal.event.id,
+          paymentType: "pay_now",
+          transactionId: paymentProof.transactionId.trim(),
+          screenshot: paymentProof.screenshot,
+        });
+        if (created?.id) await createPayment({ participationId: created.id, transactionId: paymentProof.transactionId.trim(), screenshot: paymentProof.screenshot });
+        setModal(null);
+        setPaymentProof({ transactionId: "", screenshot: null });
+      } catch (err) {
+        setActionError(err?.message || "Registration failed");
+      } finally {
+        setActionLoading(false);
+      }
+      return;
+    }
+    addParticipant(modal.event, "pay_now", paymentProof.transactionId.trim(), paymentProof.screenshot);
     setModal(null);
     setPaymentProof({ transactionId: "", screenshot: null });
   };
@@ -107,9 +146,10 @@ export default function StudentDashboard() {
 
   return (
     <div className="student-dashboard">
+      {actionError && <p className="sd-action-error">{actionError}</p>}
       <header className="sd-header sd-card-dark">
         <h1>Student Dashboard</h1>
-        <button className="sd-logout sd-btn-elegant" onClick={handleLogout}>
+        <button className="sd-logout sd-btn-elegant" onClick={handleLogout} disabled={actionLoading}>
           <LogOut size={18} /> Logout
         </button>
       </header>
@@ -165,7 +205,7 @@ export default function StudentDashboard() {
                     <span className="sd-meta">{ev.date} · {ev.venue}</span>
                     <span className="sd-payment-mode">Payment: {reg?.paymentType === "pay_now" ? "Pay now" : "Pay at arrival"}</span>
                   </div>
-                  <button type="button" className="sd-undo-btn sd-btn-elegant" onClick={() => handleUndoRegistration(ev.id)} title="Undo registration">
+                  <button type="button" className="sd-undo-btn sd-btn-elegant" onClick={() => handleUndoRegistration(ev.id)} title="Undo registration" disabled={actionLoading}>
                     <RotateCcw size={16} /> Undo
                   </button>
                 </li>
@@ -232,7 +272,7 @@ export default function StudentDashboard() {
                     />
                   </div>
                 </div>
-                <button type="submit" className="sd-submit sd-btn-elegant" disabled={!canSubmitPayNow}>
+                <button type="submit" className="sd-submit sd-btn-elegant" disabled={!canSubmitPayNow || actionLoading}>
                   Submit & Register
                 </button>
               </form>

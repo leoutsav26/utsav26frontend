@@ -15,6 +15,7 @@ export default function Login() {
   const [message, setMessage] = useState("");
   const [needsProfile, setNeedsProfile] = useState(false);
   const [profile, setProfile] = useState({ name: "", rollNo: "", phone: "" });
+  const [loading, setLoading] = useState(false);
 
   const doRedirect = (role) => {
     if (redirect && redirect.startsWith("/")) {
@@ -26,53 +27,73 @@ export default function Login() {
     else navigate("/admin", { replace: true });
   };
 
-  const handleStudentSubmit = (e) => {
+  const handleStudentSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-    const result = login("student", email.trim(), null);
-    if (result.ok) {
-      doRedirect("student");
-      return;
+    setLoading(true);
+    try {
+      const result = await Promise.resolve(login("student", email.trim(), null));
+      if (result?.ok) {
+        doRedirect("student");
+        return;
+      }
+      if (result?.needsProfile) {
+        setNeedsProfile(true);
+        setMessage("First time here? Enter your details below.");
+        return;
+      }
+      setMessage(result?.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
     }
-    if (result.needsProfile) {
-      setNeedsProfile(true);
-      setMessage("First time here? Enter your details below.");
-      return;
-    }
-    setMessage(result.message || "Something went wrong.");
   };
 
-  const handleCoordinatorSubmit = (e) => {
+  const handleCoordinatorSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-    const result = login("coordinator", email.trim(), password);
-    if (result.ok) {
-      doRedirect("coordinator");
-      return;
+    setLoading(true);
+    try {
+      const result = await Promise.resolve(login("coordinator", email.trim(), password));
+      if (result?.ok) {
+        doRedirect("coordinator");
+        return;
+      }
+      setMessage(result?.message || "Login failed.");
+    } finally {
+      setLoading(false);
     }
-    setMessage(result.message || "Login failed.");
   };
 
-  const handleAdminSubmit = (e) => {
+  const handleAdminSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-    const result = login("admin", email.trim(), password);
-    if (result.ok) {
-      doRedirect("admin");
-      return;
+    setLoading(true);
+    try {
+      const result = await Promise.resolve(login("admin", email.trim(), password));
+      if (result?.ok) {
+        doRedirect("admin");
+        return;
+      }
+      setMessage(result?.message || "Login failed.");
+    } finally {
+      setLoading(false);
     }
-    setMessage(result.message || "Login failed.");
   };
 
-  const handleProfileSubmit = (e) => {
+  const handleProfileSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-    const result = login("student", email.trim(), null, profile);
-    if (result.ok) {
-      doRedirect("student");
-      return;
+    setLoading(true);
+    try {
+      const result = await Promise.resolve(login("student", email.trim(), null, profile));
+      if (result?.ok) {
+        doRedirect("student");
+        return;
+      }
+      setMessage(result?.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
     }
-    setMessage(result.message || "Something went wrong.");
   };
 
   const resetMode = () => {
@@ -118,7 +139,7 @@ export default function Login() {
             />
             {message && <p className="login-message">{message}</p>}
             <div className="login-form-actions">
-              <button type="submit" className="login-btn student-btn">Continue</button>
+              <button type="submit" className="login-btn student-btn" disabled={loading}>{loading ? "Please wait…" : "Continue"}</button>
               <button type="button" className="login-back" onClick={resetMode}>Back</button>
             </div>
           </form>
@@ -156,7 +177,7 @@ export default function Login() {
               required
             />
             <div className="login-form-actions">
-              <button type="submit" className="login-btn student-btn">Create profile & Continue</button>
+              <button type="submit" className="login-btn student-btn" disabled={loading}>{loading ? "Please wait…" : "Create profile & Continue"}</button>
               <button type="button" className="login-back" onClick={() => setNeedsProfile(false)}>Back</button>
             </div>
           </form>
@@ -185,7 +206,7 @@ export default function Login() {
             />
             {message && <p className="login-message">{message}</p>}
             <div className="login-form-actions">
-              <button type="submit" className="login-btn coord-btn">Sign In</button>
+              <button type="submit" className="login-btn coord-btn" disabled={loading}>{loading ? "Signing in…" : "Sign In"}</button>
               <button type="button" className="login-back" onClick={resetMode}>Back</button>
             </div>
           </form>
@@ -214,7 +235,7 @@ export default function Login() {
             />
             {message && <p className="login-message">{message}</p>}
             <div className="login-form-actions">
-              <button type="submit" className="login-btn admin-btn">Sign In</button>
+              <button type="submit" className="login-btn admin-btn" disabled={loading}>{loading ? "Signing in…" : "Sign In"}</button>
               <button type="button" className="login-back" onClick={resetMode}>Back</button>
             </div>
           </form>

@@ -11,15 +11,8 @@ const Home = () => {
   const [mouseSpot, setMouseSpot] = useState({ x: 0.5, y: 0.5 });
 
   useEffect(() => {
-    if (events && events.length > 0) {
-      const open = events.filter((e) => !e.status || e.status === "open" || e.status === "ongoing");
-      setFeaturedList(open.slice(0, 2));
-    } else {
-      fetch("/events.json")
-        .then((res) => res.json())
-        .then((data) => setFeaturedList(Array.isArray(data) ? data.slice(0, 2) : []))
-        .catch(() => setFeaturedList([]));
-    }
+    const open = (events || []).filter((e) => !e.status || e.status === "open" || e.status === "ongoing");
+    setFeaturedList(open.slice(0, 2));
   }, [events]);
 
   useEffect(() => {

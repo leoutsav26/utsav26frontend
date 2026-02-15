@@ -30,6 +30,10 @@ export default function CoordinatorDashboard() {
     setParticipants,
     leaderboards,
     setLeaderboards,
+    useApi,
+    joinEventAsCoordinator,
+    leaveEventAsCoordinator,
+    updateParticipationStatus,
   } = useAppData();
 
   const [selectedEventId, setSelectedEventId] = useState(null);
@@ -59,29 +63,63 @@ export default function CoordinatorDashboard() {
     return openOrOngoing.filter((e) => !myActiveIds.includes(e.id));
   }, [events, myActiveIds]);
 
-  const handleIAmIn = (eventId) => {
+  const handleIAmIn = async (eventId) => {
     const list = coordActive[user.id] || [];
     if (list.length >= MAX_ACTIVE) {
-      alert("You are already coordinating 2 events.");
+      alert("You cannot coordinate more than 2 events. Please exit one event first to join another.");
+      return;
+    }
+    if (useApi) {
+      try {
+        await joinEventAsCoordinator(eventId, user.id);
+      } catch (err) {
+        alert(err?.message || "Failed to join event");
+      }
       return;
     }
     setCoordActive({ ...coordActive, [user.id]: [...list, eventId] });
   };
 
-  const handleUndo = (eventId) => {
+  const handleUndo = async (eventId) => {
+    if (useApi) {
+      try {
+        await leaveEventAsCoordinator(eventId, user.id);
+        setSelectedEventId(null);
+      } catch (err) {
+        alert(err?.message || "Failed to leave event");
+      }
+      return;
+    }
     const list = (coordActive[user.id] || []).filter((id) => id !== eventId);
     setCoordActive({ ...coordActive, [user.id]: list });
     setSelectedEventId(null);
   };
 
-  const handleMarkArrived = (eventId, participant) => {
+  const handleMarkArrived = async (eventId, participant) => {
+    if (useApi && participant.id) {
+      try {
+        await updateParticipationStatus(participant.id, eventId, { arrived: !participant.arrived });
+      } catch (err) {
+        alert(err?.message || "Failed to update");
+      }
+      return;
+    }
     const list = (participants[eventId] || []).map((p) =>
       p.studentId === participant.studentId ? { ...p, arrived: !p.arrived } : p
     );
     setParticipants({ ...participants, [eventId]: list });
   };
 
-  const handlePaymentStatus = (eventId, participant, status) => {
+  const handlePaymentStatus = async (eventId, participant, status) => {
+    if (useApi && participant.id) {
+      try {
+        await updateParticipationStatus(participant.id, eventId, { paymentStatus: status });
+        setPaymentModal(null);
+      } catch (err) {
+        alert(err?.message || "Failed to update");
+      }
+      return;
+    }
     const list = (participants[eventId] || []).map((p) =>
       p.studentId === participant.studentId ? { ...p, paymentStatus: status } : p
     );

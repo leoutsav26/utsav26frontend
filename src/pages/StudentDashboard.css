@@ -425,3 +425,12 @@
   background: var(--neon-orange);
   color: var(--space-bg);
 }
+
+.sd-action-error {
+  color: var(--neon-orange);
+  background: rgba(255, 100, 0, 0.1);
+  border: 1px solid rgba(255, 100, 0, 0.3);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}

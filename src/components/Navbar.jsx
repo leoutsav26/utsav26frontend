@@ -29,7 +29,6 @@ const Navbar = () => {
 
       <div className={`nav-links ${menuOpen ? "active" : ""}`}>
         <NavLink to="/" onClick={closeMenu} end>Home</NavLink>
-        <NavLink to="/about" onClick={closeMenu}>About Us</NavLink>
         <NavLink to="/events" onClick={closeMenu}>Events & Activities</NavLink>
         <NavLink to="/contact" onClick={closeMenu}>Contact</NavLink>
         {user ? (

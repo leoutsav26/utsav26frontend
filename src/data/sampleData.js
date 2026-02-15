@@ -1,4 +1,5 @@
-// Sample users and initial events – no backend, used for testing
+// Sample users and initial events. Used only when VITE_API_URL is not set (offline / dev without backend).
+// When VITE_API_URL is set, all data comes from the API; this file is not used for persistence.
 
 export const SAMPLE_STUDENTS = [
   {
