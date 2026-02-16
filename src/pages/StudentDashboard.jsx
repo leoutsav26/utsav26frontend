@@ -6,7 +6,7 @@ import { LogOut, Ticket, Trophy, X, RotateCcw, User } from "lucide-react";
 import "./StudentDashboard.css";
 
 export default function StudentDashboard() {
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const navigate = useNavigate();
   const { events, participants, winners, setParticipants, useApi, createParticipation, deleteParticipation, createPayment } = useAppData();
   const [modal, setModal] = useState(null);
@@ -100,51 +100,81 @@ export default function StudentDashboard() {
 
   const handlePayNowSubmit = async (e) => {
     e.preventDefault();
+
     if (!modal?.event) return;
-    const txId = paymentProof.transactionId.trim();
-    if (!txId) return;
-    if (useApi) {
-      setActionError(null);
-      setActionLoading(true);
-      try {
-        await createParticipation({
-          eventId: modal.event.id,
-          paymentType: "pay_now",
-          transactionId: txId,
-          /* screenshot intentionally not sent to backend */
-        });
-        setModal(null);
-        setPaymentProof({ transactionId: "", screenshot: null });
-      } catch (err) {
-        setActionError(err?.message || "Registration failed");
-      } finally {
-        setActionLoading(false);
-      }
+
+    if (!paymentProof.transactionId.trim() || !paymentProof.screenshot) {
+      alert("Enter transaction ID and upload screenshot");
       return;
     }
-    if (!paymentProof.screenshot) return;
-    addParticipant(modal.event, "pay_now", txId, paymentProof.screenshot);
-    setModal(null);
-    setPaymentProof({ transactionId: "", screenshot: null });
-  };
 
+    try {
+      setActionLoading(true);
+
+      // ⭐ STEP 1 — Create participation
+      const participationRes = await createParticipation({
+        eventId: modal.event.id,
+        userId: user.id,          // 🔥 ADD THIS
+        paymentType: "pay_now"
+      });
+
+
+      if (!participationRes?.id) {
+        alert("Registration failed");
+        return;
+      }
+
+      // ⭐ STEP 2 — SEND SCREENSHOT TO BACKEND
+      const formData = new FormData();
+      formData.append("participationId", participationRes.id);
+      formData.append("transactionId", paymentProof.transactionId);
+      formData.append("screenshot", paymentProof.screenshot);
+      
+      console.log("TOKEN:", token);
+      console.log("TOKEN FROM LOCALSTORAGE:", localStorage.getItem("token"));
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/payments`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        },
+        body: formData
+      });
+
+      if (!res.ok) {
+        throw new Error("Payment upload failed");
+      }
+
+      alert("Payment submitted 🎉");
+      setModal(null);
+
+    } catch (err) {
+      console.error(err);
+      alert("Payment failed");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const handleScreenshotChange = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setPaymentProof((p) => ({ ...p, screenshot: reader.result }));
-    reader.readAsDataURL(file);
+
+    setPaymentProof(prev => ({
+      ...prev,
+      screenshot: file   // ⭐ MUST be file object
+    }));
   };
+
+
+
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
 
-  const canSubmitPayNow = useApi
-    ? !!paymentProof.transactionId.trim()
-    : paymentProof.transactionId.trim() && paymentProof.screenshot;
+  const canSubmitPayNow = paymentProof.transactionId.trim() && paymentProof.screenshot;
+  console.log(paymentProof); 
 
   if (!user) return null;
 
@@ -260,14 +290,18 @@ export default function StudentDashboard() {
 
             {modal.step === "paynow" && (
               <form onSubmit={handlePayNowSubmit} className="sd-paynow-form">
-                <p className="sd-required-hint">
-                  {useApi ? "Enter transaction ID to complete registration. Screenshot is optional (not sent to server)." : "Enter transaction ID and upload screenshot to complete registration."}
-                </p>
+                <p className="sd-required-hint">Enter transaction ID and upload screenshot to complete registration.</p>
                 <div className="sd-qr-row">
                   <img src={`/qr/${modal.event.id}.png`} alt="QR" className="sd-qr-img" onError={(e) => e.target.style.display = "none"} />
                   <div className="sd-upload-box">
-                    {!useApi && <><label>Upload payment screenshot *</label><input type="file" accept="image/*" onChange={handleScreenshotChange} required /></>}
-                    {useApi && <><label>Upload payment screenshot (optional, kept locally)</label><input type="file" accept="image/*" onChange={handleScreenshotChange} /></>}
+                    <label>Upload payment screenshot *</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleScreenshotChange}
+                      required
+                    />
+
                     <label>Transaction ID *</label>
                     <input
                       type="text"
@@ -276,6 +310,7 @@ export default function StudentDashboard() {
                       placeholder="Enter transaction ID"
                       required
                     />
+
                   </div>
                 </div>
                 <button type="submit" className="sd-submit sd-btn-elegant" disabled={!canSubmitPayNow || actionLoading}>
