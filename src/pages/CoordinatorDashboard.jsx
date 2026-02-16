@@ -57,6 +57,25 @@ export default function CoordinatorDashboard() {
       refreshDataForUser(user);
     }
   }, [useApi, activeTab, user?.id, refreshDataForUser, user]);
+  
+  useEffect(() => {
+    if (useApi && activeTab === "leaderboard" && selectedEventId) {
+      fetch(`/api/leaderboard/${selectedEventId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`
+        }
+      })
+        .then(res => res.json())
+        .then(data => {
+          setLeaderboards({
+            ...leaderboards,
+            [selectedEventId]: data,
+          });
+        })
+        .catch(() => {});
+    }
+  }, [useApi, activeTab, selectedEventId]);
+
 
   /* Show all events the coordinator has joined (including completed) so "My Active Work" is never empty when they have assignments. */
   const myActiveEvents = useMemo(() => {
@@ -134,28 +153,66 @@ export default function CoordinatorDashboard() {
     setPaymentModal(null);
   };
 
-  const handleAddScore = (eventId, participantId, name, leoId, rollNo, scoreStr) => {
+  const handleAddScore = async (eventId, participantId, name, leoId, rollNo, scoreStr) => {
     const score = parseFloat(scoreStr);
     if (isNaN(score)) return;
-    const key = eventId;
-    const list = (leaderboards[key] || []).filter((e) => e.participantId !== participantId);
-    setLeaderboards({
-      ...leaderboards,
-      [key]: [...list, { participantId, name, leoId, rollNo: rollNo ?? null, score }].sort((a, b) => (b.score || 0) - (a.score || 0)),
-    });
-    setEditScore(null);
+
+    if (useApi) {
+      try {
+        const res = await fetch(`/api/leaderboard/${eventId}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`
+          },
+          body: JSON.stringify({ participantId, score }),
+        });
+
+        const updated = await res.json();
+
+        setLeaderboards({
+          ...leaderboards,
+          [eventId]: updated,
+        });
+
+        setEditScore(null);
+      } catch (err) {
+        alert("Failed to save score");
+      }
+      return;
+    }
   };
 
-  const handleUpdateScore = (eventId, participantId, scoreStr) => {
+  const handleUpdateScore = async (eventId, participantId, scoreStr) => {
     const score = parseFloat(scoreStr);
     if (isNaN(score)) return;
-    const key = eventId;
-    const list = (leaderboards[key] || []).map((e) =>
-      e.participantId === participantId ? { ...e, score } : e
-    ).sort((a, b) => (b.score || 0) - (a.score || 0));
-    setLeaderboards({ ...leaderboards, [key]: list });
-    setEditScore(null);
+
+    if (useApi) {
+      try {
+        const res = await fetch(`/api/leaderboard/${eventId}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`
+          },
+          body: JSON.stringify({ participantId, score }),
+        });
+
+        const updated = await res.json();
+
+        setLeaderboards({
+          ...leaderboards,
+          [eventId]: updated,
+        });
+
+        setEditScore(null);
+      } catch (err) {
+        alert("Failed to update score");
+      }
+      return;
+    }
   };
+
 
   const leaderboardForEvent = (eventId) => (leaderboards[eventId] || []).map((e, i) => ({ ...e, rank: i + 1 }));
 
