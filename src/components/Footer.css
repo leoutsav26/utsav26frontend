@@ -37,11 +37,22 @@
 
 .footer-socials {
   margin-top: 15px;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.footer-socials a {
+  display: inline-flex;
 }
 
 .footer-socials img {
   width: 40px;
-  margin: 0 10px;
+  height: 40px;
+  object-fit: contain;
   transition: transform 0.3s ease, filter 0.3s ease;
   border-radius: 50%;
 }

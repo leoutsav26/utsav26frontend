@@ -85,3 +85,16 @@
   z-index: 1;
   pointer-events: none;
 }
+
+/* Mobile: smaller section, image scaled down without cropping; text unchanged */
+@media (max-width: 768px) {
+  .section1 {
+    height: 42vh;
+    min-height: 260px;
+  }
+
+  .section1-img {
+    object-fit: contain;
+    object-position: center center;
+  }
+}

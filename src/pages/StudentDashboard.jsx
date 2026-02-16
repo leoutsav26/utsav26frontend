@@ -98,22 +98,35 @@ export default function StudentDashboard() {
     setParticipants(next);
   };
 
-  const handlePayNowSubmit = (e) => {
-  e.preventDefault();
-  if (!modal?.event) return;
-  if (!paymentProof.transactionId.trim() || !paymentProof.screenshot) return;
-
-  // EXACT SAME behavior as pay at arrival
-  addParticipant(
-    modal.event,
-    "pay_now",
-    paymentProof.transactionId.trim(),
-    paymentProof.screenshot
-  );
-
-  setModal(null);
-  setPaymentProof({ transactionId: "", screenshot: null });
-};
+  const handlePayNowSubmit = async (e) => {
+    e.preventDefault();
+    if (!modal?.event) return;
+    const txId = paymentProof.transactionId.trim();
+    if (!txId) return;
+    if (useApi) {
+      setActionError(null);
+      setActionLoading(true);
+      try {
+        await createParticipation({
+          eventId: modal.event.id,
+          paymentType: "pay_now",
+          transactionId: txId,
+          /* screenshot intentionally not sent to backend */
+        });
+        setModal(null);
+        setPaymentProof({ transactionId: "", screenshot: null });
+      } catch (err) {
+        setActionError(err?.message || "Registration failed");
+      } finally {
+        setActionLoading(false);
+      }
+      return;
+    }
+    if (!paymentProof.screenshot) return;
+    addParticipant(modal.event, "pay_now", txId, paymentProof.screenshot);
+    setModal(null);
+    setPaymentProof({ transactionId: "", screenshot: null });
+  };
 
 
   const handleScreenshotChange = (e) => {
@@ -129,7 +142,9 @@ export default function StudentDashboard() {
     navigate("/login");
   };
 
-  const canSubmitPayNow = paymentProof.transactionId.trim() && paymentProof.screenshot;
+  const canSubmitPayNow = useApi
+    ? !!paymentProof.transactionId.trim()
+    : paymentProof.transactionId.trim() && paymentProof.screenshot;
 
   if (!user) return null;
 
@@ -245,12 +260,14 @@ export default function StudentDashboard() {
 
             {modal.step === "paynow" && (
               <form onSubmit={handlePayNowSubmit} className="sd-paynow-form">
-                <p className="sd-required-hint">Enter transaction ID and upload screenshot to complete registration.</p>
+                <p className="sd-required-hint">
+                  {useApi ? "Enter transaction ID to complete registration. Screenshot is optional (not sent to server)." : "Enter transaction ID and upload screenshot to complete registration."}
+                </p>
                 <div className="sd-qr-row">
                   <img src={`/qr/${modal.event.id}.png`} alt="QR" className="sd-qr-img" onError={(e) => e.target.style.display = "none"} />
                   <div className="sd-upload-box">
-                    <label>Upload payment screenshot *</label>
-                    <input type="file" accept="image/*" onChange={handleScreenshotChange} required />
+                    {!useApi && <><label>Upload payment screenshot *</label><input type="file" accept="image/*" onChange={handleScreenshotChange} required /></>}
+                    {useApi && <><label>Upload payment screenshot (optional, kept locally)</label><input type="file" accept="image/*" onChange={handleScreenshotChange} /></>}
                     <label>Transaction ID *</label>
                     <input
                       type="text"

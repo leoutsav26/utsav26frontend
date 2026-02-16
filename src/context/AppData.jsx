@@ -231,6 +231,11 @@ export function AppDataProvider({ children }) {
       await eventsApi.updateEventStatus(id, status);
       setEvents((prev) => (prev || []).map((e) => (e.id === id ? { ...e, status } : e)));
     },
+    async deleteEvent(id) {
+      if (!useApi) return null;
+      await eventsApi.deleteEvent(id);
+      setEvents((prev) => (prev || []).filter((e) => e.id !== id));
+    },
     async createParticipation(body) {
       if (!useApi) return null;
       const created = await participationsApi.createParticipation(body);
@@ -280,6 +285,12 @@ export function AppDataProvider({ children }) {
       await leaderboardApi.completeEvent(eventId, winnerParticipantIds);
       setEvents((prev) => (prev || []).map((e) => (e.id === eventId ? { ...e, status: "completed" } : e)));
       setWinners((w) => ({ ...(w || {}), [eventId]: winnerParticipantIds }));
+    },
+    /** Fetch participations for one event and patch state (e.g. for coordinator panel). */
+    async fetchParticipationsForEvent(eventId) {
+      if (!useApi || !eventId) return;
+      const list = await participationsApi.getParticipationsByEvent(eventId).catch(() => []);
+      dispatch({ type: "PATCH_PARTICIPANTS_FOR_EVENT", eventId, payload: list });
     },
   };
 

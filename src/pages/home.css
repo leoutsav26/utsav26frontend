@@ -62,7 +62,33 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 18px; /* REDUCED GAP */
+  gap: 18px;
+}
+
+/* Logo: 1/3 size, always bright, golden glow */
+.hero-logo {
+  width: auto;
+  height: auto;
+  max-width: 240px;
+  max-height: 240px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.9))
+          drop-shadow(0 0 24px rgba(255, 180, 0, 0.7))
+          drop-shadow(0 0 40px rgba(255, 215, 0, 0.4));
+  animation: logoGoldenGlow 3s ease-in-out infinite;
+}
+
+@keyframes logoGoldenGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.9))
+            drop-shadow(0 0 24px rgba(255, 180, 0, 0.7))
+            drop-shadow(0 0 40px rgba(255, 215, 0, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 16px rgba(255, 215, 0, 1))
+            drop-shadow(0 0 36px rgba(255, 180, 0, 0.85))
+            drop-shadow(0 0 56px rgba(255, 215, 0, 0.5));
+  }
 }
 
 /* Canvas should not affect layout */
@@ -102,8 +128,8 @@ body {
   position: relative;
   z-index: 1;
   padding: 0 20px;
-  opacity: 0.55;
-  transition: opacity 0.35s ease, filter 0.35s ease, transform 0.35s ease;
+  opacity: 1;
+  transition: filter 0.35s ease, transform 0.35s ease;
   width: 100%;
   max-width: 100%;
   display: flex;
@@ -113,21 +139,27 @@ body {
   text-align: center;
 }
 
-.leo-typewriter-section:hover .leo-typewriter {
-  opacity: 1;
-}
-
 .leo-typewriter-section.hero-lighting .leo-typewriter h1,
 .leo-typewriter-section.hero-lighting .leo-typewriter .leo-subtitle {
   transition: text-shadow 0.35s ease, filter 0.35s ease;
 }
 
-.leo-typewriter-section:hover .leo-typewriter h1 {
+/* Title and subtitle always bright */
+.leo-typewriter-section .leo-typewriter h1.hero-neon-title {
   filter: drop-shadow(0 0 12px var(--glow-blue)) drop-shadow(0 0 24px var(--glow-golden));
 }
 
-.leo-typewriter-section:hover .leo-typewriter .leo-subtitle {
+.leo-typewriter-section .leo-typewriter .leo-subtitle {
   text-shadow: 0 0 14px var(--glow-silver), 0 0 28px rgba(224, 224, 224, 0.5);
+  color: rgba(232, 232, 232, 0.95);
+}
+
+.leo-typewriter-section:hover .leo-typewriter h1 {
+  filter: drop-shadow(0 0 14px var(--glow-blue)) drop-shadow(0 0 28px var(--glow-golden));
+}
+
+.leo-typewriter-section:hover .leo-typewriter .leo-subtitle {
+  text-shadow: 0 0 16px var(--glow-silver), 0 0 32px rgba(224, 224, 224, 0.6);
 }
 
 .home-login-link {
@@ -191,10 +223,10 @@ body {
 .leo-subtitle {
   margin-top: 10px;
   font-size: clamp(1rem, 2.5vw, 1.4rem);
-  color: var(--neon-silver-dim);
+  color: rgba(232, 232, 232, 0.95);
   letter-spacing: 3px;
   font-weight: 400;
-  text-shadow: 0 0 10px var(--glow-silver), 0 0 20px rgba(224, 224, 224, 0.3);
+  text-shadow: 0 0 10px var(--glow-silver), 0 0 20px rgba(224, 224, 224, 0.5);
   text-align: center;
 }
 

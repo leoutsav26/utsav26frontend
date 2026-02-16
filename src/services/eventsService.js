@@ -25,3 +25,8 @@ export async function updateEvent(id, payload) {
 export async function updateEventStatus(id, status) {
   return api.patch(`/events/${id}/status`, { status });
 }
+
+/** Soft-delete event (participations/data preserved). */
+export async function deleteEvent(id) {
+  return api.delete(`/events/${id}`);
+}

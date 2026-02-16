@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAppData } from "../context/AppData";
-import { LogOut, Plus, Edit2, Users, DollarSign, FileText, X, LayoutDashboard, Calendar, UserCheck } from "lucide-react";
+import { getLeaderboard } from "../services/leaderboardService";
+import { LogOut, Plus, Edit2, Users, DollarSign, FileText, X, LayoutDashboard, Calendar, UserCheck, Trash2, UserPlus } from "lucide-react";
+import { createUser as createUserApi } from "../services/usersService";
 import "./AdminDashboard.css";
 
 export default function AdminDashboard() {
@@ -28,10 +30,17 @@ export default function AdminDashboard() {
     updateEventStatus,
     updateCoordinatorStatus,
     completeEventWithWinners,
+    deleteEvent,
+    refreshDataForUser,
   } = useAppData();
 
   const [eventForm, setEventForm] = useState(null);
   const [reportEventId, setReportEventId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [addUserSuccess, setAddUserSuccess] = useState(null);
+  const [addUserLoading, setAddUserLoading] = useState(false);
+  const [addUserError, setAddUserError] = useState(null);
 
   const coordinators = users?.coordinators || [];
   const pendingCoords = coordinators.filter((c) => c.status === "pending");
@@ -126,6 +135,55 @@ export default function AdminDashboard() {
     setReportEventId(null);
   };
 
+  const handleDeleteEvent = async () => {
+    if (!deleteConfirm?.eventId) return;
+    setDeleteLoading(true);
+    try {
+      if (useApi) await deleteEvent(deleteConfirm.eventId);
+      else setEvents((events || []).filter((e) => e.id !== deleteConfirm.eventId));
+      setDeleteConfirm(null);
+    } catch (err) {
+      alert(err?.message || "Failed to delete event");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    setAddUserError(null);
+    setAddUserSuccess(null);
+    const form = e.target;
+    const email = (form.email?.value || "").trim();
+    const name = (form.name?.value || "").trim();
+    const rollNo = (form.rollNo?.value || "").trim();
+    const phone = (form.phone?.value || "").trim();
+    const role = form.role?.value || "coordinator";
+    if (!email || !name) {
+      setAddUserError("Email and name are required.");
+      return;
+    }
+    if (!useApi) {
+      setAddUserError("Add user is available when connected to the backend.");
+      return;
+    }
+    setAddUserLoading(true);
+    try {
+      const res = await createUserApi({ email, name, rollNo: rollNo || undefined, phone: phone || undefined, role });
+      const tempPass = res?.temporaryPassword ?? "leo" + name.slice(0, 4);
+      setAddUserSuccess(tempPass);
+      setAddUserError(null);
+      form.reset();
+      if (user) refreshDataForUser(user);
+      setTimeout(() => setAddUserSuccess(null), 12000);
+    } catch (err) {
+      setAddUserError(err?.message || "Failed to create user");
+      setAddUserSuccess(null);
+    } finally {
+      setAddUserLoading(false);
+    }
+  };
+
   const revenueSummary = useMemo(() => {
     let total = 0;
     const byEvent = {};
@@ -161,6 +219,7 @@ export default function AdminDashboard() {
         <Link to="/admin" className={`admin-tab-link ${section === "home" ? "active" : ""}`}><LayoutDashboard size={18} /> Home</Link>
         <Link to="/admin/events" className={`admin-tab-link ${tab === "events" ? "active" : ""}`}>Events</Link>
         <Link to="/admin/coordinators" className={`admin-tab-link ${tab === "coordinators" ? "active" : ""}`}>Coordinators</Link>
+        <Link to="/admin/adduser" className={`admin-tab-link ${tab === "adduser" ? "active" : ""}`}><UserPlus size={18} /> Add user</Link>
         <Link to="/admin/revenue" className={`admin-tab-link ${tab === "revenue" ? "active" : ""}`}>Revenue</Link>
       </nav>
 
@@ -176,11 +235,45 @@ export default function AdminDashboard() {
               <UserCheck size={32} />
               <span>Coordinators</span>
             </Link>
+            <Link to="/admin/adduser" className="admin-home-card card-effect btn-visibility">
+              <UserPlus size={32} />
+              <span>Add user</span>
+            </Link>
             <Link to="/admin/revenue" className="admin-home-card card-effect btn-visibility">
               <DollarSign size={32} />
               <span>Revenue</span>
             </Link>
           </div>
+        </section>
+      )}
+
+      {tab === "adduser" && (
+        <section className="admin-section">
+          <h2>Add admin or coordinator</h2>
+          <p className="admin-adduser-hint">New user&apos;s password will be <strong>&quot;leo&quot;</strong> + first 4 letters of their name (e.g. John → leoJohn).</p>
+          {addUserError && <p className="admin-action-error">{addUserError}</p>}
+          {addUserSuccess && (
+            <div className="admin-action-success" role="alert">
+              <strong>User created successfully.</strong> Share this temporary password with them: <strong className="admin-temp-password">{addUserSuccess}</strong>
+              <br /><span className="admin-success-note">Form has been reset. You can add another user. This message will disappear in a moment.</span>
+            </div>
+          )}
+          <form onSubmit={handleAddUser} className="admin-adduser-form">
+            <label>Email *</label>
+            <input name="email" type="email" required placeholder="e.g. admin@leoclub.com" />
+            <label>Name *</label>
+            <input name="name" type="text" required placeholder="Full name" />
+            <label>Roll no</label>
+            <input name="rollNo" type="text" placeholder="Optional" />
+            <label>Phone</label>
+            <input name="phone" type="text" placeholder="Optional" />
+            <label>Role *</label>
+            <select name="role" required>
+              <option value="coordinator">Coordinator</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button type="submit" className="admin-save-btn" disabled={addUserLoading}>{addUserLoading ? "Creating…" : "Create user"}</button>
+          </form>
         </section>
       )}
 
@@ -205,6 +298,7 @@ export default function AdminDashboard() {
                     </>
                   )}
                   <button onClick={() => setReportEventId(ev.id)}><FileText size={14} /> Report</button>
+                  <button className="admin-delete-btn" onClick={() => setDeleteConfirm({ eventId: ev.id, title: ev.title })} title="Delete event"><Trash2 size={14} /> Delete</button>
                 </div>
               </div>
             ))}
@@ -291,6 +385,19 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {deleteConfirm && (
+        <div className="admin-modal-overlay" onClick={() => !deleteLoading && setDeleteConfirm(null)}>
+          <div className="admin-confirm-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Delete event?</h3>
+            <p className="admin-confirm-text">Are you sure you want to delete <strong>"{deleteConfirm.title}"</strong>? The event will be removed from the list. <strong>Registration and participation data will be preserved.</strong></p>
+            <div className="admin-confirm-actions">
+              <button type="button" className="admin-confirm-cancel" onClick={() => setDeleteConfirm(null)} disabled={deleteLoading}>Cancel</button>
+              <button type="button" className="admin-confirm-delete" onClick={handleDeleteEvent} disabled={deleteLoading}>{deleteLoading ? "Deleting…" : "Delete event"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {reportEventId && (
         <div className="admin-modal-overlay" onClick={() => setReportEventId(null)}>
           <div className="admin-report-modal" onClick={(e) => e.stopPropagation()}>
@@ -299,10 +406,12 @@ export default function AdminDashboard() {
               eventId={reportEventId}
               event={(events || []).find((e) => e.id === reportEventId)}
               participants={participants}
+              leaderboards={leaderboards}
               coordinators={getCoordsForEvent(reportEventId)}
               revenueSummary={revenueSummary}
               winners={winners}
               users={users}
+              useApi={useApi}
               onComplete={() => handleCompleteEvent(reportEventId)}
               onClose={() => setReportEventId(null)}
             />
@@ -313,12 +422,23 @@ export default function AdminDashboard() {
   );
 }
 
-function EventReportPreview({ eventId, event, participants, coordinators, revenueSummary, winners, users, onComplete, onClose }) {
+function EventReportPreview({ eventId, event, participants, leaderboards, coordinators, revenueSummary, winners, users, useApi, onComplete, onClose }) {
+  const [reportLeaderboard, setReportLeaderboard] = React.useState(null);
   const partList = (participants || {})[eventId] || [];
   const amount = (revenueSummary?.byEvent || {})[eventId]?.amount ?? partList.length * (event?.cost ?? 10);
   const winnerIds = (winners || {})[eventId] || [];
+  const lbFromContext = (leaderboards || {})[eventId] || [];
+  const lbList = reportLeaderboard !== null ? reportLeaderboard : lbFromContext;
+  const leaderboardWithRank = (lbList || []).map((e, i) => ({ ...e, rank: i + 1 }));
   const timestamp = new Date().toLocaleString("en-IN");
   const organiser = "Leo Club of CEG";
+
+  useEffect(() => {
+    if (!useApi || !eventId) return;
+    getLeaderboard(eventId)
+      .then((list) => setReportLeaderboard(Array.isArray(list) ? list : []))
+      .catch(() => setReportLeaderboard([]));
+  }, [useApi, eventId]);
 
   const handleDownload = () => {
     window.print();
@@ -329,15 +449,67 @@ function EventReportPreview({ eventId, event, participants, coordinators, revenu
   return (
     <div className="report-preview card-effect">
       <div className="report-watermark">Leo Club of CEG</div>
-      <h2 className="report-title">{event.title}</h2>
-      <div className="report-meta">
-        <p><strong>Participant count:</strong> {partList.length}</p>
-        <p><strong>Amount collected:</strong> ₹{amount} (Rupees only)</p>
-        <p><strong>Event status:</strong> {event.status}</p>
-        <p><strong>Generated:</strong> {timestamp}</p>
+      <header className="report-header">
+        <h2 className="report-title">{event.title}</h2>
+        <p className="report-subtitle">Event Report</p>
+      </header>
+      <div className="report-meta report-meta-grid">
+        <div className="report-meta-item report-event-name">
+          <span className="report-meta-label">Event name</span>
+          <span className="report-meta-value">{event.title}</span>
+        </div>
+        <div className="report-meta-item">
+          <span className="report-meta-label">Participants</span>
+          <span className="report-meta-value">{partList.length}</span>
+        </div>
+        <div className="report-meta-item">
+          <span className="report-meta-label">Amount collected</span>
+          <span className="report-meta-value">₹{amount}</span>
+        </div>
+        <div className="report-meta-item">
+          <span className="report-meta-label">Status</span>
+          <span className="report-meta-value report-status-badge">{event.status}</span>
+        </div>
+        <div className="report-meta-item">
+          <span className="report-meta-label">Generated</span>
+          <span className="report-meta-value report-meta-date">{timestamp}</span>
+        </div>
       </div>
-      <div className="report-section">
-        <h4>Student details & registration timing</h4>
+
+      <div className="report-section report-section-card report-leaderboard-block">
+        <h4 className="report-section-title">
+          <span className="report-section-icon">🏆</span> Current Leaderboard
+        </h4>
+        {leaderboardWithRank.length > 0 ? (
+          <table className="report-table report-table-leaderboard">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Roll No</th>
+                <th>Name</th>
+                <th>LEO ID</th>
+                <th>Score</th>
+              </tr>
+            </thead>
+            <tbody>
+              {leaderboardWithRank.map((e) => (
+                <tr key={e.participantId}>
+                  <td className="report-rank">{e.rank}</td>
+                  <td>{e.rollNo ?? "—"}</td>
+                  <td>{e.name}</td>
+                  <td>{e.leoId}</td>
+                  <td className="report-score">{e.score}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p className="report-empty-leaderboard">No scores recorded yet for this event.</p>
+        )}
+      </div>
+
+      <div className="report-section report-section-card">
+        <h4 className="report-section-title">Student details & registration</h4>
         <table className="report-table">
           <thead>
             <tr><th>Name</th><th>LEO ID</th><th>Payment</th><th>Registered at</th></tr>
@@ -355,9 +527,9 @@ function EventReportPreview({ eventId, event, participants, coordinators, revenu
         </table>
       </div>
       {winnerIds.length > 0 && (
-        <div className="report-section">
-          <h4>Winners list</h4>
-          <ol>
+        <div className="report-section report-section-card">
+          <h4 className="report-section-title">Winners</h4>
+          <ol className="report-winners-list">
             {winnerIds.map((sid, i) => {
               const p = partList.find((x) => x.studentId === sid);
               return <li key={sid}>{p ? `${p.name} (${p.leoId})` : `Winner ${i + 1}`}</li>;
@@ -365,17 +537,17 @@ function EventReportPreview({ eventId, event, participants, coordinators, revenu
           </ol>
         </div>
       )}
-      <div className="report-section">
-        <h4>Coordinators</h4>
-        <ul>
+      <div className="report-section report-section-card">
+        <h4 className="report-section-title">Coordinators</h4>
+        <ul className="report-list">
           {(coordinators || []).map((c) => (
             <li key={c.id}>{c.name} — {c.email}</li>
           ))}
-          {(coordinators || []).length === 0 && <li>None assigned</li>}
+          {(coordinators || []).length === 0 && <li className="report-list-empty">None assigned</li>}
         </ul>
       </div>
-      <div className="report-section">
-        <h4>Organiser</h4>
+      <div className="report-section report-section-card report-organiser">
+        <h4 className="report-section-title">Organiser</h4>
         <p>{organiser}</p>
       </div>
       <div className="report-actions">

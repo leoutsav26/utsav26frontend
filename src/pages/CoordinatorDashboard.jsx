@@ -34,6 +34,8 @@ export default function CoordinatorDashboard() {
     joinEventAsCoordinator,
     leaveEventAsCoordinator,
     updateParticipationStatus,
+    fetchParticipationsForEvent,
+    refreshDataForUser,
   } = useAppData();
 
   const [selectedEventId, setSelectedEventId] = useState(null);
@@ -42,24 +44,29 @@ export default function CoordinatorDashboard() {
 
   const myActiveIds = (coordActive[user?.id] || []);
 
+  /* When coordinator selects an event on Participants tab, ensure we fetch that event’s participations. */
   useEffect(() => {
-    if (!user?.id) return;
-    const current = coordActive[user.id] || [];
-    const list = current.filter((eventId) => {
-      const ev = (events || []).find((e) => e.id === eventId);
-      return ev && ev.status !== "completed";
-    });
-    if (list.length < current.length) {
-      setCoordActive({ ...coordActive, [user.id]: list });
+    if (useApi && activeTab === "participants" && selectedEventId) {
+      fetchParticipationsForEvent(selectedEventId);
     }
-  }, [events, user?.id, coordActive, setCoordActive]);
+  }, [useApi, activeTab, selectedEventId, fetchParticipationsForEvent]);
 
+  /* When coordinator opens My Active Work, refresh their event ids so the list shows correctly. */
+  useEffect(() => {
+    if (useApi && user && activeTab === "active") {
+      refreshDataForUser(user);
+    }
+  }, [useApi, activeTab, user?.id, refreshDataForUser, user]);
+
+  /* Show all events the coordinator has joined (including completed) so "My Active Work" is never empty when they have assignments. */
   const myActiveEvents = useMemo(() => {
-    return (events || []).filter((e) => myActiveIds.includes(e.id) && e.status !== "completed");
+    return (events || []).filter((e) => myActiveIds.includes(e.id));
   }, [events, myActiveIds]);
 
   const eventsICanJoin = useMemo(() => {
-    const openOrOngoing = (events || []).filter((e) => e.status === "open" || e.status === "ongoing");
+    const openOrOngoing = (events || []).filter(
+      (e) => !e.status || e.status === "open" || e.status === "ongoing"
+    );
     return openOrOngoing.filter((e) => !myActiveIds.includes(e.id));
   }, [events, myActiveIds]);
 
@@ -210,7 +217,13 @@ export default function CoordinatorDashboard() {
         <section className="coord-section">
           <h2>Events I Can Join</h2>
           {eventsICanJoin.length === 0 ? (
-            <p className="coord-empty">No events available to join, or you’re already in 2.</p>
+            <p className="coord-empty">
+              {(events || []).filter((e) => !e.status || e.status === "open" || e.status === "ongoing").length === 0
+                ? "No open or ongoing events to join right now."
+                : myActiveIds.length >= MAX_ACTIVE
+                  ? "You’re already coordinating 2 events. Exit one from My Active Work to join another."
+                  : "No events available to join right now."}
+            </p>
           ) : (
             <ul className="coord-event-list">
               {eventsICanJoin.map((ev) => (
@@ -231,7 +244,7 @@ export default function CoordinatorDashboard() {
         <section className="coord-section">
           <h2>My Active Work</h2>
           {myActiveEvents.length === 0 ? (
-            <p className="coord-empty">You have no active events. Join from “Events I Can Join”.</p>
+            <p className="coord-empty">You have no events yet. Join from “Events I Can Join”.</p>
           ) : (
             <ul className="coord-event-list">
               {myActiveEvents.map((ev) => (
@@ -239,8 +252,13 @@ export default function CoordinatorDashboard() {
                   <div>
                     <strong>{ev.title}</strong>
                     <span className="coord-meta">{ev.date} · {ev.venue}</span>
+                    <span className="coord-event-status">{ev.status || "open"}</span>
                   </div>
-                  <button className="coord-undo" onClick={() => handleUndo(ev.id)}>Exit / Undo</button>
+                  {(ev.status === "open" || ev.status === "ongoing") ? (
+                    <button className="coord-undo" onClick={() => handleUndo(ev.id)}>Exit / Undo</button>
+                  ) : (
+                    <span className="coord-status-badge">{ev.status}</span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -374,29 +392,41 @@ export default function CoordinatorDashboard() {
               </div>
               <div className="coord-add-score">
                 <h4>Add / Modify score</h4>
-                {((participants || {})[selectedEventId] || []).map((p) => {
-                  const existing = (leaderboards[selectedEventId] || []).find((e) => e.participantId === p.studentId);
-                  const isEditing = editScore?.participantId === p.studentId;
-                  return (
-                    <div key={p.studentId} className="coord-score-row">
-                      <span>{p.rollNo ? `${p.rollNo} · ` : ""}{p.name} ({p.leoId})</span>
-                      {isEditing ? (
-                        <form onSubmit={(ev) => { ev.preventDefault(); handleUpdateScore(selectedEventId, p.studentId, ev.target.score.value); }} style={{ display: "flex", gap: 8 }}>
-                          <input name="score" type="number" step="any" defaultValue={editScore?.currentScore} />
-                          <button type="submit">Update</button>
-                          <button type="button" onClick={() => setEditScore(null)}>Cancel</button>
-                        </form>
-                      ) : existing ? (
-                        <button onClick={() => setEditScore({ eventId: selectedEventId, participantId: p.studentId, currentScore: existing.score })}>Modify score</button>
-                      ) : (
-                        <form onSubmit={(ev) => { ev.preventDefault(); handleAddScore(selectedEventId, p.studentId, p.name, p.leoId, p.rollNo, ev.target.score.value); }} style={{ display: "flex", gap: 8 }}>
-                          <input name="score" type="number" step="any" placeholder="Score" required />
-                          <button type="submit">Add score</button>
-                        </form>
-                      )}
-                    </div>
-                  );
-                })}
+                {(() => {
+                  const eventParticipants = (participants || {})[selectedEventId] || [];
+                  const lb = leaderboards[selectedEventId] || [];
+                  const hasScore = (p) => lb.some((e) => e.participantId === p.studentId);
+                  const sorted = [...eventParticipants].sort((a, b) => {
+                    const aScored = hasScore(a);
+                    const bScored = hasScore(b);
+                    if (!aScored && bScored) return -1;
+                    if (aScored && !bScored) return 1;
+                    return 0;
+                  });
+                  return sorted.map((p) => {
+                    const existing = lb.find((e) => e.participantId === p.studentId);
+                    const isEditing = editScore?.participantId === p.studentId;
+                    return (
+                      <div key={p.studentId} className="coord-score-row">
+                        <span>{p.rollNo ? `${p.rollNo} · ` : ""}{p.name} ({p.leoId})</span>
+                        {isEditing ? (
+                          <form onSubmit={(ev) => { ev.preventDefault(); handleUpdateScore(selectedEventId, p.studentId, ev.target.score.value); }} style={{ display: "flex", gap: 8 }}>
+                            <input name="score" type="number" step="any" defaultValue={editScore?.currentScore} />
+                            <button type="submit">Update</button>
+                            <button type="button" onClick={() => setEditScore(null)}>Cancel</button>
+                          </form>
+                        ) : existing ? (
+                          <button onClick={() => setEditScore({ eventId: selectedEventId, participantId: p.studentId, currentScore: existing.score })}>Modify score</button>
+                        ) : (
+                          <form onSubmit={(ev) => { ev.preventDefault(); handleAddScore(selectedEventId, p.studentId, p.name, p.leoId, p.rollNo, ev.target.score.value); }} style={{ display: "flex", gap: 8 }}>
+                            <input name="score" type="number" step="any" placeholder="Score" required />
+                            <button type="submit">Add score</button>
+                          </form>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
               </div>
             </>
           )}
