@@ -11,17 +11,25 @@ const Section1 = () => {
     originY: 0,
   });
 
-  // Dynamically set beam origin (top center)
+  // Recalculate beam origin on load AND resize
   useEffect(() => {
-    const section = sectionRef.current;
-    if (!section) return;
+    const updateOrigin = () => {
+      const section = sectionRef.current;
+      if (!section) return;
 
-    const rect = section.getBoundingClientRect();
-    setBeamStyle((prev) => ({
-      ...prev,
-      originX: rect.width / 2,
-      originY: 0,
-    }));
+      const rect = section.getBoundingClientRect();
+
+      setBeamStyle((prev) => ({
+        ...prev,
+        originX: rect.width / 2,
+        originY: rect.height * 0.12, // aligns near lighthouse bulb
+      }));
+    };
+
+    updateOrigin();
+    window.addEventListener("resize", updateOrigin);
+
+    return () => window.removeEventListener("resize", updateOrigin);
   }, []);
 
   const handleMouseMove = (e) => {
@@ -111,19 +119,18 @@ const Section1 = () => {
       />
 
       <h1 className="section1-heading">
-  {"Participate".split("").map((char, i) => (
-    <span key={"p" + i} className="beam-letter">
-      {char}
-    </span>
-  ))}
-  <br />
-  {"For A Cause!".split("").map((char, i) => (
-    <span key={"c" + i} className="beam-letter">
-      {char === " " ? "\u00A0" : char}
-    </span>
-  ))}
-</h1>
-
+        {"Participate".split("").map((char, i) => (
+          <span key={"p" + i} className="beam-letter">
+            {char}
+          </span>
+        ))}
+        <br />
+        {"For A Cause!".split("").map((char, i) => (
+          <span key={"c" + i} className="beam-letter">
+            {char === " " ? "\u00A0" : char}
+          </span>
+        ))}
+      </h1>
     </div>
   );
 };
