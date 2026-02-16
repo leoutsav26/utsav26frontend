@@ -292,7 +292,6 @@ export default function StudentDashboard() {
               <form onSubmit={handlePayNowSubmit} className="sd-paynow-form">
                 <p className="sd-required-hint">Enter transaction ID and upload screenshot to complete registration.</p>
                 <div className="sd-qr-row">
-                  <img src={`/qr/${modal.event.id}.png`} alt="QR" className="sd-qr-img" onError={(e) => e.target.style.display = "none"} />
                   <div className="sd-upload-box">
                     <label>Upload payment screenshot *</label>
                     <input
