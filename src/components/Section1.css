@@ -86,15 +86,27 @@
   pointer-events: none;
 }
 
-/* Mobile: smaller section, image scaled down without cropping; text unchanged */
+/* Mobile: minimise section size to match layout; keep beam + letters working */
 @media (max-width: 768px) {
   .section1 {
-    height: 42vh;
-    min-height: 260px;
+    height: 36vh;
+    min-height: 220px;
   }
 
   .section1-img {
     object-fit: contain;
     object-position: center center;
+  }
+
+  .section1-heading {
+    font-size: clamp(0.95rem, 3.8vw, 1.35rem);
+    letter-spacing: 1px;
+    line-height: 1.2;
+    max-width: 92%;
+  }
+
+  .section1-beam {
+    height: 28vh;
+    max-height: 180px;
   }
 }

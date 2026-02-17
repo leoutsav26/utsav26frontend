@@ -20,6 +20,12 @@ export async function getWinners(eventId) {
   return Array.isArray(data) ? data : data?.winners ?? [];
 }
 
+/** Coordinators who entered scores for this event (for report). */
+export async function getScoreEnteredBy(eventId) {
+  const data = await api.get(`/events/${eventId}/score-entered-by`);
+  return Array.isArray(data) ? data : [];
+}
+
 export async function completeEvent(eventId, winnerParticipantIds = []) {
   return api.patch(`/events/${eventId}/complete`, { winnerParticipantIds });
 }

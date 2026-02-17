@@ -2,17 +2,18 @@ import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAppData } from "../context/AppData";
-import { LogOut, Ticket, Trophy, X, RotateCcw, User } from "lucide-react";
+import { LogOut, Ticket, Trophy, X, RotateCcw, User, Search } from "lucide-react";
 import "./StudentDashboard.css";
 
 export default function StudentDashboard() {
-  const { user, logout, token } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { events, participants, winners, setParticipants, useApi, createParticipation, deleteParticipation, createPayment } = useAppData();
   const [modal, setModal] = useState(null);
   const [paymentProof, setPaymentProof] = useState({ transactionId: "", screenshot: null });
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
+  const [eventSearch, setEventSearch] = useState("");
   const winnerEventIds = useMemo(() => {
     const w = winners || {};
     return Object.keys(w).filter((eid) => (w[eid] || []).includes(user?.id));
@@ -20,6 +21,17 @@ export default function StudentDashboard() {
 
   const eventsList = Array.isArray(events) ? events : [];
   const openEvents = eventsList.filter((e) => !e.status || e.status === "open" || e.status === "ongoing");
+  const filteredOpenEvents = useMemo(() => {
+    const q = (eventSearch || "").trim().toLowerCase();
+    if (!q) return openEvents;
+    return openEvents.filter(
+      (e) =>
+        (e.title || "").toLowerCase().includes(q) ||
+        (e.description || "").toLowerCase().includes(q) ||
+        (e.category || "").toLowerCase().includes(q) ||
+        (e.venue || "").toLowerCase().includes(q)
+    );
+  }, [openEvents, eventSearch]);
   const myRegistrations = openEvents.filter((e) => {
     const list = (participants || {})[e.id] || [];
     return list.some((p) => p.studentId === user?.id);
@@ -251,8 +263,22 @@ export default function StudentDashboard() {
 
       <section className="sd-section sd-card-dark">
         <h2>Register for events</h2>
+        <div className="sd-search-wrap">
+          <Search size={18} className="sd-search-icon" aria-hidden />
+          <input
+            type="search"
+            className="sd-search-input"
+            placeholder="Search events by title, category, venue…"
+            value={eventSearch}
+            onChange={(e) => setEventSearch(e.target.value)}
+            aria-label="Search events"
+          />
+        </div>
+        {filteredOpenEvents.length === 0 && (
+          <p className="sd-empty">{openEvents.length === 0 ? "No events to join right now." : "No events match your search."}</p>
+        )}
         <div className="sd-cards">
-          {openEvents.map((ev) => {
+          {filteredOpenEvents.map((ev) => {
             const registered = (participants || {})[ev.id]?.some((p) => p.studentId === user.id);
             return (
               <div key={ev.id} className="sd-card sd-card-dark sd-card-elegant">

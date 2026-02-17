@@ -12,14 +12,16 @@ export async function login(role, email, password = null, profile = null) {
   if (profile && typeof profile === "object") body.profile = profile;
 
   const data = await api.post("/auth/login", body);
-  if (data.token) setAuthToken(data.token);
+  const token = data.token ?? data.accessToken ?? data.access_token;
+  if (token) setAuthToken(token);
   return data;
 }
 
 export async function registerStudent(email, profile) {
   const body = { email: email.trim(), name: profile.name?.trim(), rollNo: String(profile.rollNo ?? "").trim(), phone: String(profile.phone ?? "").trim() };
   const data = await api.post("/auth/register", body);
-  if (data.token) setAuthToken(data.token);
+  const token = data.token ?? data.accessToken ?? data.access_token;
+  if (token) setAuthToken(token);
   return data;
 }
 

@@ -292,6 +292,12 @@ export function AppDataProvider({ children }) {
       const list = await participationsApi.getParticipationsByEvent(eventId).catch(() => []);
       dispatch({ type: "PATCH_PARTICIPANTS_FOR_EVENT", eventId, payload: list });
     },
+    /** Fetch leaderboard for one event and patch state (persisted in backend). */
+    async fetchLeaderboardForEvent(eventId) {
+      if (!useApi || !eventId) return;
+      const list = await leaderboardApi.getLeaderboard(eventId).catch(() => []);
+      dispatch({ type: "PATCH_LEADERBOARD_FOR_EVENT", eventId, payload: list });
+    },
   };
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

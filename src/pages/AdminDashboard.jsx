@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAppData } from "../context/AppData";
-import { getLeaderboard } from "../services/leaderboardService";
+import { getLeaderboard, getScoreEnteredBy } from "../services/leaderboardService";
 import { LogOut, Plus, Edit2, Users, DollarSign, FileText, X, LayoutDashboard, Calendar, UserCheck, Trash2, UserPlus } from "lucide-react";
 import { createUser as createUserApi } from "../services/usersService";
 import "./AdminDashboard.css";
@@ -211,7 +211,7 @@ export default function AdminDashboard() {
   return (
     <div className="admin-dashboard">
       <header className="admin-header card-effect">
-        <h1>Admin Dashboard</h1>
+        <h1>Admin Dashboard{user?.name ? ` — ${user.name}` : ""}</h1>
         <button className="admin-logout btn-visibility" onClick={handleLogout}><LogOut size={18} /> Logout</button>
       </header>
 
@@ -225,7 +225,7 @@ export default function AdminDashboard() {
 
       {section === "home" && (
         <section className="admin-home card-effect">
-          <h2>Welcome — Choose a section</h2>
+          <h2>Welcome{user?.name ? `, ${user.name}` : ""} — Choose a section</h2>
           <div className="admin-home-cards">
             <Link to="/admin/events" className="admin-home-card card-effect btn-visibility">
               <Calendar size={32} />
@@ -424,20 +424,40 @@ export default function AdminDashboard() {
 
 function EventReportPreview({ eventId, event, participants, leaderboards, coordinators, revenueSummary, winners, users, useApi, onComplete, onClose }) {
   const [reportLeaderboard, setReportLeaderboard] = React.useState(null);
+  const [scoreEnteredBy, setScoreEnteredBy] = React.useState([]);
   const partList = (participants || {})[eventId] || [];
   const amount = (revenueSummary?.byEvent || {})[eventId]?.amount ?? partList.length * (event?.cost ?? 10);
   const winnerIds = (winners || {})[eventId] || [];
   const lbFromContext = (leaderboards || {})[eventId] || [];
-  const lbList = reportLeaderboard !== null ? reportLeaderboard : lbFromContext;
+  const isLeaderboardLoading = useApi && reportLeaderboard === null;
+  const lbList = useApi ? (reportLeaderboard || []) : (lbFromContext || []);
   const leaderboardWithRank = (lbList || []).map((e, i) => ({ ...e, rank: i + 1 }));
   const timestamp = new Date().toLocaleString("en-IN");
   const organiser = "Leo Club of CEG";
+
+  useEffect(() => {
+    setReportLeaderboard(null);
+    setScoreEnteredBy([]);
+  }, [eventId]);
 
   useEffect(() => {
     if (!useApi || !eventId) return;
     getLeaderboard(eventId)
       .then((list) => setReportLeaderboard(Array.isArray(list) ? list : []))
       .catch(() => setReportLeaderboard([]));
+  }, [useApi, eventId]);
+
+  useEffect(() => {
+    if (!useApi || !eventId) return;
+    getScoreEnteredBy(eventId)
+      .then((list) => {
+        console.log('Score entered by:', list);
+        setScoreEnteredBy(Array.isArray(list) ? list : []);
+      })
+      .catch((err) => {
+        console.error('Failed to fetch score entered by:', err);
+        setScoreEnteredBy([]);
+      });
   }, [useApi, eventId]);
 
   const handleDownload = () => {
@@ -467,6 +487,10 @@ function EventReportPreview({ eventId, event, participants, leaderboards, coordi
           <span className="report-meta-value">₹{amount}</span>
         </div>
         <div className="report-meta-item">
+          <span className="report-meta-label">Revenue generated</span>
+          <span className="report-meta-value">₹{amount}</span>
+        </div>
+        <div className="report-meta-item">
           <span className="report-meta-label">Status</span>
           <span className="report-meta-value report-status-badge">{event.status}</span>
         </div>
@@ -480,7 +504,9 @@ function EventReportPreview({ eventId, event, participants, leaderboards, coordi
         <h4 className="report-section-title">
           <span className="report-section-icon">🏆</span> Current Leaderboard
         </h4>
-        {leaderboardWithRank.length > 0 ? (
+        {isLeaderboardLoading ? (
+          <p className="report-empty-leaderboard">Loading leaderboard…</p>
+        ) : leaderboardWithRank.length > 0 ? (
           <table className="report-table report-table-leaderboard">
             <thead>
               <tr>
@@ -538,12 +564,20 @@ function EventReportPreview({ eventId, event, participants, leaderboards, coordi
         </div>
       )}
       <div className="report-section report-section-card">
-        <h4 className="report-section-title">Coordinators</h4>
+        <h4 className="report-section-title">Coordinators who entered scores</h4>
+        <p className="report-section-desc">Names of coordinators (or admins) who entered or updated marks/scores for this event.</p>
         <ul className="report-list">
-          {(coordinators || []).map((c) => (
-            <li key={c.id}>{c.name} — {c.email}</li>
-          ))}
-          {(coordinators || []).length === 0 && <li className="report-list-empty">None assigned</li>}
+          {scoreEnteredBy.length > 0 ? (
+            scoreEnteredBy.map((c) => (
+              <li key={c.id}><strong>{c.name || 'Unknown'}</strong></li>
+            ))
+          ) : (
+            <li className="report-list-empty">
+              {useApi 
+                ? "No scores entered yet, or scores were entered before this feature was added. Make sure the 'entered_by' column exists in the leaderboard table."
+                : "No scores entered yet."}
+            </li>
+          )}
         </ul>
       </div>
       <div className="report-section report-section-card report-organiser">

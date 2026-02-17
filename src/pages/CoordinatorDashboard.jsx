@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAppData } from "../context/AppData";
+import * as leaderboardService from "../services/leaderboardService";
 import { ORGANISER } from "../data/sampleData";
 import { LogOut, UserCheck, Users, Trophy, X, LayoutDashboard } from "lucide-react";
 import "./CoordinatorDashboard.css";
@@ -33,6 +34,7 @@ export default function CoordinatorDashboard() {
     useApi,
     joinEventAsCoordinator,
     leaveEventAsCoordinator,
+    fetchLeaderboardForEvent,
     updateParticipationStatus,
     fetchParticipationsForEvent,
     refreshDataForUser,
@@ -59,22 +61,10 @@ export default function CoordinatorDashboard() {
   }, [useApi, activeTab, user?.id, refreshDataForUser, user]);
   
   useEffect(() => {
-    if (useApi && activeTab === "leaderboard" && selectedEventId) {
-      fetch(`/api/leaderboard/${selectedEventId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`
-        }
-      })
-        .then(res => res.json())
-        .then(data => {
-          setLeaderboards({
-            ...leaderboards,
-            [selectedEventId]: data,
-          });
-        })
-        .catch(() => {});
+    if (useApi && activeTab === "leaderboard" && selectedEventId && fetchLeaderboardForEvent) {
+      fetchLeaderboardForEvent(selectedEventId);
     }
-  }, [useApi, activeTab, selectedEventId]);
+  }, [useApi, activeTab, selectedEventId, fetchLeaderboardForEvent]);
 
 
   /* Show all events the coordinator has joined (including completed) so "My Active Work" is never empty when they have assignments. */
@@ -159,25 +149,11 @@ export default function CoordinatorDashboard() {
 
     if (useApi) {
       try {
-        const res = await fetch(`/api/leaderboard/${eventId}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`
-          },
-          body: JSON.stringify({ participantId, score }),
-        });
-
-        const updated = await res.json();
-
-        setLeaderboards({
-          ...leaderboards,
-          [eventId]: updated,
-        });
-
+        await leaderboardService.setLeaderboardEntry(eventId, participantId, { score });
+        if (fetchLeaderboardForEvent) await fetchLeaderboardForEvent(eventId);
         setEditScore(null);
       } catch (err) {
-        alert("Failed to save score");
+        alert(err?.message || "Failed to save score");
       }
       return;
     }
@@ -189,25 +165,11 @@ export default function CoordinatorDashboard() {
 
     if (useApi) {
       try {
-        const res = await fetch(`/api/leaderboard/${eventId}`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`
-          },
-          body: JSON.stringify({ participantId, score }),
-        });
-
-        const updated = await res.json();
-
-        setLeaderboards({
-          ...leaderboards,
-          [eventId]: updated,
-        });
-
+        await leaderboardService.setLeaderboardEntry(eventId, participantId, { score });
+        if (fetchLeaderboardForEvent) await fetchLeaderboardForEvent(eventId);
         setEditScore(null);
       } catch (err) {
-        alert("Failed to update score");
+        alert(err?.message || "Failed to update score");
       }
       return;
     }
@@ -231,7 +193,7 @@ export default function CoordinatorDashboard() {
   return (
     <div className="coord-dashboard">
       <header className="coord-header card-effect">
-        <h1>Coordinator Dashboard</h1>
+        <h1>Coordinator Dashboard{user?.name ? ` — ${user.name}` : ""}</h1>
         <button className="coord-logout btn-visibility" onClick={handleLogout}><LogOut size={18} /> Logout</button>
       </header>
 
@@ -248,7 +210,7 @@ export default function CoordinatorDashboard() {
 
       {section === "home" && (
         <section className="coord-home card-effect">
-          <h2>Welcome — Choose a section</h2>
+          <h2>Welcome{user?.name ? `, ${user.name}` : ""} — Choose a section</h2>
           <div className="coord-home-cards">
             <Link to="/coordinator/join" className="coord-home-card card-effect btn-visibility">
               <UserCheck size={32} />

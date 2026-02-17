@@ -18,12 +18,16 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const doRedirect = (role) => {
+    // Students always go to student dashboard (ignore redirect from URL)
+    if (role === "student") {
+      navigate("/student", { replace: true });
+      return;
+    }
     if (redirect && redirect.startsWith("/")) {
       navigate(redirect, { replace: true });
       return;
     }
-    if (role === "student") navigate("/student", { replace: true });
-    else if (role === "coordinator") navigate("/coordinator", { replace: true });
+    if (role === "coordinator") navigate("/coordinator", { replace: true });
     else navigate("/admin", { replace: true });
   };
 

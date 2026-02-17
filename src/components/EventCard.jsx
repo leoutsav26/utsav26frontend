@@ -6,15 +6,22 @@ const EventCard = ({ event }) => {
   const navigate = useNavigate();
 
   const formatDate = (date) => {
-    return new Date(date).toLocaleDateString("en-IN", {
+    if (date == null) return "—";
+    const d = new Date(date);
+    if (Number.isNaN(d.getTime())) return "—";
+    return d.toLocaleDateString("en-IN", {
       day: "numeric",
       month: "short",
     });
   };
 
   const formatTime = (time) => {
-    const [h, m] = time.split(":");
-    const hour = parseInt(h);
+    if (time == null || typeof time !== "string") return "—";
+    const parts = time.split(":");
+    const h = parts[0];
+    const m = parts[1] ?? "00";
+    const hour = parseInt(h, 10);
+    if (Number.isNaN(hour)) return "—";
     const ampm = hour >= 12 ? "PM" : "AM";
     const hour12 = hour % 12 || 12;
     return `${hour12}:${m} ${ampm}`;
@@ -23,12 +30,12 @@ const EventCard = ({ event }) => {
   return (
     <div className="event-card">
       <div className="event-image">
-        <span className="category-badge">{event.category}</span>
+        <span className="category-badge">{event.category ?? "Event"}</span>
       </div>
 
       <div className="event-content">
         <h3>{event.title}</h3>
-        <p className="event-desc">{event.description}</p>
+        <p className="event-desc">{event.description ?? ""}</p>
 
         <div className="event-meta">
           <div>
@@ -36,7 +43,7 @@ const EventCard = ({ event }) => {
             {formatTime(event.time)}
           </div>
           <div>
-            <MapPin size={16} /> {event.venue}
+            <MapPin size={16} /> {event.venue ?? "—"}
           </div>
         </div>
 

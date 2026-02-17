@@ -9,13 +9,20 @@ export class ApiError extends Error {
   }
 }
 
+const LEGACY_TOKEN_KEY = "token";
+
 export function getAuthToken() {
-  return localStorage.getItem(AUTH_TOKEN_KEY);
+  return localStorage.getItem(AUTH_TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY);
 }
 
 export function setAuthToken(token) {
-  if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
-  else localStorage.removeItem(AUTH_TOKEN_KEY);
+  if (token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+    localStorage.setItem(LEGACY_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(LEGACY_TOKEN_KEY);
+  }
 }
 
 /**
