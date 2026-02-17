@@ -3,7 +3,8 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAppData } from "../context/AppData";
 import { getLeaderboard, getScoreEnteredBy } from "../services/leaderboardService";
-import { LogOut, Plus, Edit2, Users, DollarSign, FileText, X, LayoutDashboard, Calendar, UserCheck, Trash2, UserPlus } from "lucide-react";
+import { getVisits as getVisitsApi } from "../services/analyticsService";
+import { LogOut, Plus, Edit2, Users, DollarSign, FileText, X, LayoutDashboard, Calendar, UserCheck, Trash2, UserPlus, BarChart3 } from "lucide-react";
 import { createUser as createUserApi } from "../services/usersService";
 import "./AdminDashboard.css";
 
@@ -41,10 +42,21 @@ export default function AdminDashboard() {
   const [addUserSuccess, setAddUserSuccess] = useState(null);
   const [addUserLoading, setAddUserLoading] = useState(false);
   const [addUserError, setAddUserError] = useState(null);
+  const [visitsData, setVisitsData] = useState({ total: 0, byDate: [] });
+  const [visitsLoading, setVisitsLoading] = useState(false);
 
   const coordinators = users?.coordinators || [];
   const pendingCoords = coordinators.filter((c) => c.status === "pending");
   const approvedCoords = coordinators.filter((c) => c.status === "approved");
+
+  useEffect(() => {
+    if (!useApi || tab !== "visits") return;
+    setVisitsLoading(true);
+    getVisitsApi()
+      .then(setVisitsData)
+      .catch(() => setVisitsData({ total: 0, byDate: [] }))
+      .finally(() => setVisitsLoading(false));
+  }, [useApi, tab]);
 
   const handleApproveCoord = async (coordId) => {
     if (useApi) {
@@ -221,6 +233,7 @@ export default function AdminDashboard() {
         <Link to="/admin/coordinators" className={`admin-tab-link ${tab === "coordinators" ? "active" : ""}`}>Coordinators</Link>
         <Link to="/admin/adduser" className={`admin-tab-link ${tab === "adduser" ? "active" : ""}`}><UserPlus size={18} /> Add user</Link>
         <Link to="/admin/revenue" className={`admin-tab-link ${tab === "revenue" ? "active" : ""}`}>Revenue</Link>
+        <Link to="/admin/visits" className={`admin-tab-link ${tab === "visits" ? "active" : ""}`}><BarChart3 size={18} /> Visits</Link>
       </nav>
 
       {section === "home" && (
@@ -242,6 +255,10 @@ export default function AdminDashboard() {
             <Link to="/admin/revenue" className="admin-home-card card-effect btn-visibility">
               <DollarSign size={32} />
               <span>Revenue</span>
+            </Link>
+            <Link to="/admin/visits" className="admin-home-card card-effect btn-visibility">
+              <BarChart3 size={32} />
+              <span>Visits</span>
             </Link>
           </div>
         </section>
@@ -347,6 +364,45 @@ export default function AdminDashboard() {
         </section>
       )}
 
+      {tab === "visits" && (
+        <section className="admin-section">
+          <h2><BarChart3 size={24} /> Site visits</h2>
+          <p className="admin-visits-desc">Number of people who visited the website (one count per browser session).</p>
+          {visitsLoading ? (
+            <p className="admin-visits-loading">Loading…</p>
+          ) : (
+            <>
+              <div className="admin-visits-total">
+                <BarChart3 size={28} />
+                <span>Total visits: <strong>{visitsData.total}</strong></span>
+              </div>
+              {visitsData.byDate.length > 0 ? (
+                <div className="admin-visits-table-wrap">
+                  <table className="admin-visits-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Visits</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visitsData.byDate.map((d) => (
+                        <tr key={d.date}>
+                          <td>{d.date}</td>
+                          <td>{d.count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="admin-visits-empty">No visits recorded yet. Visits are counted when someone opens the site (once per session).</p>
+              )}
+            </>
+          )}
+        </section>
+      )}
+
       {eventForm && (
         <div className="admin-modal-overlay" onClick={() => setEventForm(null)}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
@@ -420,6 +476,14 @@ export default function AdminDashboard() {
       )}
     </div>
   );
+}
+
+function formatPaymentDisplay(paymentStatus, paymentType) {
+  if (paymentStatus) return paymentStatus;
+  if (paymentType === "pay_via_cash") return "Pay via cash";
+  if (paymentType === "pay_via_upi") return "Pay via UPI";
+  if (paymentType === "pay_at_arrival" || paymentType === "pay_now") return paymentType === "pay_now" ? "Pay now" : "Pay at arrival";
+  return paymentType || "-";
 }
 
 function EventReportPreview({ eventId, event, participants, leaderboards, coordinators, revenueSummary, winners, users, useApi, onComplete, onClose }) {
@@ -545,7 +609,7 @@ function EventReportPreview({ eventId, event, participants, leaderboards, coordi
               <tr key={i}>
                 <td>{p.name}</td>
                 <td>{p.leoId}</td>
-                <td>{p.paymentStatus || p.paymentType || "-"}</td>
+                <td>{formatPaymentDisplay(p.paymentStatus, p.paymentType)}</td>
                 <td>{p.registeredAt ? new Date(p.registeredAt).toLocaleString("en-IN") : "-"}</td>
               </tr>
             ))}

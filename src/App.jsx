@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
+import { API_BASE } from "./config/api";
 import Navbar from "./components/Navbar.jsx";
 import EventDetails from "./pages/EventDetails.jsx";
 import Contact from "./pages/Contact.jsx";
@@ -24,9 +25,20 @@ function ProtectedRoute({ children, role }) {
   return children;
 }
 
+const VISIT_RECORDED_KEY = "leo_visit_recorded";
+
 const App = () => {
   useEffect(() => {
     document.title = "Leo Club Of CEG";
+  }, []);
+
+  useEffect(() => {
+    if (!API_BASE || typeof sessionStorage === "undefined") return;
+    if (sessionStorage.getItem(VISIT_RECORDED_KEY)) return;
+    const url = `${API_BASE}/analytics/visit`;
+    fetch(url, { method: "POST" })
+      .then(() => sessionStorage.setItem(VISIT_RECORDED_KEY, "1"))
+      .catch(() => {});
   }, []);
 
   return (

@@ -424,6 +424,69 @@
   color: var(--text-light);
 }
 
+/* Visits (analytics) */
+.admin-visits-desc {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 1.25rem;
+}
+
+.admin-visits-loading {
+  color: var(--text-muted);
+  padding: 1rem 0;
+}
+
+.admin-visits-total {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 1.25rem;
+  background: rgba(0, 170, 255, 0.1);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(0, 170, 255, 0.2);
+  color: var(--neon-blue);
+  font-size: 1.25rem;
+}
+
+.admin-visits-total strong {
+  color: var(--neon-golden);
+}
+
+.admin-visits-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 170, 255, 0.2);
+}
+
+.admin-visits-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--text-light);
+}
+
+.admin-visits-table th,
+.admin-visits-table td {
+  padding: 10px 16px;
+  text-align: left;
+  border-bottom: 1px solid rgba(0, 170, 255, 0.1);
+}
+
+.admin-visits-table th {
+  background: rgba(0, 170, 255, 0.08);
+  color: var(--neon-silver);
+  font-weight: 600;
+}
+
+.admin-visits-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-visits-empty {
+  color: var(--text-muted);
+  padding: 1rem 0;
+}
+
 .admin-modal-overlay {
   position: fixed;
   inset: 0;

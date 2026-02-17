@@ -10,7 +10,6 @@ export default function StudentDashboard() {
   const navigate = useNavigate();
   const { events, participants, winners, setParticipants, useApi, createParticipation, deleteParticipation, createPayment } = useAppData();
   const [modal, setModal] = useState(null);
-  const [paymentProof, setPaymentProof] = useState({ transactionId: "", screenshot: null });
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [eventSearch, setEventSearch] = useState("");
@@ -44,23 +43,19 @@ export default function StudentDashboard() {
 
   const handleRegisterClick = (event) => {
     setModal({ event, step: "choice" });
-    setPaymentProof({ transactionId: "", screenshot: null });
   };
 
-  const handlePaymentChoice = (payNow) => {
-    if (payNow) setModal((m) => ({ ...m, step: "paynow" }));
-    else {
-      if (useApi) {
-        setActionError(null);
-        setActionLoading(true);
-        createParticipation({ eventId: modal.event.id, paymentType: "pay_at_arrival" })
-          .then(() => setModal(null))
-          .catch((err) => setActionError(err?.message || "Registration failed"))
-          .finally(() => setActionLoading(false));
-      } else {
-        addParticipant(modal.event, "pay_at_arrival", null, null);
-        setModal(null);
-      }
+  const handlePaymentChoice = (paymentType) => {
+    if (useApi) {
+      setActionError(null);
+      setActionLoading(true);
+      createParticipation({ eventId: modal.event.id, paymentType })
+        .then(() => setModal(null))
+        .catch((err) => setActionError(err?.message || "Registration failed"))
+        .finally(() => setActionLoading(false));
+    } else {
+      addParticipant(modal.event, paymentType, null, null);
+      setModal(null);
     }
   };
 
@@ -77,8 +72,8 @@ export default function StudentDashboard() {
           name: user.name,
           leoId: user.leoId,
           rollNo: user.rollNo || null,
-          paymentType: paymentType || "pay_at_arrival",
-          paymentStatus: paymentType === "pay_now" ? "pending" : null,
+          paymentType: paymentType || "pay_via_cash",
+          paymentStatus: null,
           arrived: false,
           screenshot: screenshot || null,
           transactionId: transactionId || null,
@@ -110,83 +105,10 @@ export default function StudentDashboard() {
     setParticipants(next);
   };
 
-  const handlePayNowSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!modal?.event) return;
-
-    if (!paymentProof.transactionId.trim() || !paymentProof.screenshot) {
-      alert("Enter transaction ID and upload screenshot");
-      return;
-    }
-
-    try {
-      setActionLoading(true);
-
-      // ⭐ STEP 1 — Create participation
-      const participationRes = await createParticipation({
-        eventId: modal.event.id,
-        userId: user.id,          // 🔥 ADD THIS
-        paymentType: "pay_now"
-      });
-
-
-      if (!participationRes?.id) {
-        alert("Registration failed");
-        return;
-      }
-
-      // ⭐ STEP 2 — SEND SCREENSHOT TO BACKEND
-      const formData = new FormData();
-      formData.append("participationId", participationRes.id);
-      formData.append("transactionId", paymentProof.transactionId);
-      formData.append("screenshot", paymentProof.screenshot);
-      
-      console.log("TOKEN:", token);
-      console.log("TOKEN FROM LOCALSTORAGE:", localStorage.getItem("token"));
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/payments`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`
-        },
-        body: formData
-      });
-
-      if (!res.ok) {
-        throw new Error("Payment upload failed");
-      }
-
-      alert("Payment submitted 🎉");
-      setModal(null);
-
-    } catch (err) {
-      console.error(err);
-      alert("Payment failed");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleScreenshotChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setPaymentProof(prev => ({
-      ...prev,
-      screenshot: file   // ⭐ MUST be file object
-    }));
-  };
-
-
-
-
   const handleLogout = () => {
     logout();
     navigate("/login");
-  };
-
-  const canSubmitPayNow = paymentProof.transactionId.trim() && paymentProof.screenshot;
-  console.log(paymentProof); 
+  }; 
 
   if (!user) return null;
 
@@ -249,7 +171,7 @@ export default function StudentDashboard() {
                   <div>
                     <span className="sd-reg-title">{ev.title}</span>
                     <span className="sd-meta">{ev.date} · {ev.venue}</span>
-                    <span className="sd-payment-mode">Payment: {reg?.paymentType === "pay_now" ? "Pay now" : "Pay at arrival"}</span>
+                    <span className="sd-payment-mode">Payment: {reg?.paymentType === "pay_via_cash" ? "Pay via cash" : reg?.paymentType === "pay_via_upi" ? "Pay via UPI" : reg?.paymentType || "Pay via cash"}</span>
                   </div>
                   <button type="button" className="sd-undo-btn sd-btn-elegant" onClick={() => handleUndoRegistration(ev.id)} title="Undo registration" disabled={actionLoading}>
                     <RotateCcw size={16} /> Undo
@@ -308,40 +230,10 @@ export default function StudentDashboard() {
               <>
                 <p>How do you want to pay?</p>
                 <div className="sd-choice-btns">
-                  <button type="button" className="sd-btn-elegant student-btn" onClick={() => handlePaymentChoice(true)}>Pay now</button>
-                  <button type="button" className="sd-btn-elegant coord-btn" onClick={() => handlePaymentChoice(false)}>Pay when you arrive</button>
+                  <button type="button" className="sd-btn-elegant student-btn" onClick={() => handlePaymentChoice("pay_via_cash")}>Pay via cash</button>
+                  <button type="button" className="sd-btn-elegant coord-btn" onClick={() => handlePaymentChoice("pay_via_upi")}>Pay via UPI</button>
                 </div>
               </>
-            )}
-
-            {modal.step === "paynow" && (
-              <form onSubmit={handlePayNowSubmit} className="sd-paynow-form">
-                <p className="sd-required-hint">Enter transaction ID and upload screenshot to complete registration.</p>
-                <div className="sd-qr-row">
-                  <div className="sd-upload-box">
-                    <label>Upload payment screenshot *</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleScreenshotChange}
-                      required
-                    />
-
-                    <label>Transaction ID *</label>
-                    <input
-                      type="text"
-                      value={paymentProof.transactionId}
-                      onChange={(e) => setPaymentProof((p) => ({ ...p, transactionId: e.target.value }))}
-                      placeholder="Enter transaction ID"
-                      required
-                    />
-
-                  </div>
-                </div>
-                <button type="submit" className="sd-submit sd-btn-elegant" disabled={!canSubmitPayNow || actionLoading}>
-                  Submit & Register
-                </button>
-              </form>
             )}
           </div>
         </div>

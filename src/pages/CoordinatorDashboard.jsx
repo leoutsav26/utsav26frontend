@@ -329,7 +329,7 @@ export default function CoordinatorDashboard() {
                           className="coord-payment-btn"
                           onClick={() => setPaymentModal({ eventId: selectedEventId, participant: p })}
                         >
-                          {p.paymentStatus || "Set payment"}
+                          {p.paymentStatus || (p.paymentType === "pay_via_cash" ? "Pay via cash" : p.paymentType === "pay_via_upi" ? "Pay via UPI" : "Set payment")}
                         </button>
                       </td>
                     </tr>
@@ -459,9 +459,8 @@ export default function CoordinatorDashboard() {
             <h4>Payment status</h4>
             <p>{paymentModal.participant.name}</p>
             <div className="coord-payment-options">
-              <button onClick={() => handlePaymentStatus(paymentModal.eventId, paymentModal.participant, "Paid before event")}>Paid before event</button>
-              <button onClick={() => handlePaymentStatus(paymentModal.eventId, paymentModal.participant, "Paid on arrival")}>Paid on arrival</button>
               <button onClick={() => handlePaymentStatus(paymentModal.eventId, paymentModal.participant, "Paid via cash")}>Paid via cash</button>
+              <button onClick={() => handlePaymentStatus(paymentModal.eventId, paymentModal.participant, "Paid via UPI")}>Paid via UPI</button>
             </div>
           </div>
         </div>
