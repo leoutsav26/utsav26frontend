@@ -171,7 +171,7 @@ export default function StudentDashboard() {
                   <div>
                     <span className="sd-reg-title">{ev.title}</span>
                     <span className="sd-meta">{ev.date} · {ev.venue}</span>
-                    <span className="sd-payment-mode">Payment: {reg?.paymentType === "pay_via_cash" ? "Pay via cash" : reg?.paymentType === "pay_via_upi" ? "Pay via UPI" : reg?.paymentType || "Pay via cash"}</span>
+                    <span className="sd-payment-mode">Payment: {reg?.paymentType === "pay_via_cash" ? "Pay via cash" : reg?.paymentType === "pay_via_upi" ? "Pay via UPI" :reg?.paymentType === "pay_via_band" ? "Pay via Band" : reg?.paymentType || "Pay via cash"}</span>
                   </div>
                   <button type="button" className="sd-undo-btn sd-btn-elegant" onClick={() => handleUndoRegistration(ev.id)} title="Undo registration" disabled={actionLoading}>
                     <RotateCcw size={16} /> Undo
@@ -232,6 +232,7 @@ export default function StudentDashboard() {
                 <div className="sd-choice-btns">
                   <button type="button" className="sd-btn-elegant student-btn" onClick={() => handlePaymentChoice("pay_via_cash")}>Pay via cash</button>
                   <button type="button" className="sd-btn-elegant coord-btn" onClick={() => handlePaymentChoice("pay_via_upi")}>Pay via UPI</button>
+                  <button type="button" className="sd-btn-elegant coord-btn" onClick={() => handlePaymentChoice("pay_via_band")}>Pay via Band</button>
                 </div>
               </>
             )}
