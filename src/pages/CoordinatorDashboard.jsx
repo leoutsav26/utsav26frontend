@@ -144,8 +144,14 @@ export default function CoordinatorDashboard() {
   };
 
   const handleAddScore = async (eventId, participantId, scoreStr, teamNoStr) => {
-    const score = parseFloat(scoreStr);
-    const teamNo = teamNoStr ? parseInt(teamNoStr) : null;
+    const score = Number(scoreStr);
+  
+    const teamNo =
+      teamNoStr !== undefined &&
+      teamNoStr !== null &&
+      teamNoStr !== ""
+        ? Number(teamNoStr)
+        : null;
   
     if (isNaN(score)) return;
   
@@ -156,7 +162,10 @@ export default function CoordinatorDashboard() {
           participantId,
           { score, teamNo }
         );
-        if (fetchLeaderboardForEvent) await fetchLeaderboardForEvent(eventId);
+  
+        if (fetchLeaderboardForEvent)
+          await fetchLeaderboardForEvent(eventId);
+  
         setEditScore(null);
       } catch (err) {
         alert(err?.message || "Failed to save score");
@@ -165,8 +174,14 @@ export default function CoordinatorDashboard() {
   };
   
   const handleUpdateScore = async (eventId, participantId, scoreStr, teamNoStr) => {
-    const score = parseFloat(scoreStr);
-    const teamNo = teamNoStr ? parseInt(teamNoStr) : null;
+    const score = Number(scoreStr);
+  
+    const teamNo =
+      teamNoStr !== undefined &&
+      teamNoStr !== null &&
+      teamNoStr !== ""
+        ? Number(teamNoStr)
+        : null;
   
     if (isNaN(score)) return;
   
@@ -177,13 +192,17 @@ export default function CoordinatorDashboard() {
           participantId,
           { score, teamNo }
         );
-        if (fetchLeaderboardForEvent) await fetchLeaderboardForEvent(eventId);
+  
+        if (fetchLeaderboardForEvent)
+          await fetchLeaderboardForEvent(eventId);
+  
         setEditScore(null);
       } catch (err) {
         alert(err?.message || "Failed to update score");
       }
     }
   };
+
 
   const leaderboardForEvent = (eventId) => (leaderboards[eventId] || []).map((e, i) => ({ ...e, rank: i + 1 }));
 
