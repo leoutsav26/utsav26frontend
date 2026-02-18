@@ -14,9 +14,11 @@ export async function getLeaderboard(eventId) {
 export async function setLeaderboardEntry(eventId, participantId, payload) {
   return api.post(`/leaderboard/${eventId}`, {
     participantId,
-    ...payload
+    score: payload.score,
+    teamNo: payload.teamNo ?? 0
   });
 }
+
 
 export async function getWinners(eventId) {
   const data = await api.get(`/events/${eventId}/winners`);
