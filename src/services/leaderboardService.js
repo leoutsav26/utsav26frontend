@@ -29,5 +29,3 @@ export async function getScoreEnteredBy(eventId) {
 export async function completeEvent(eventId, winnerParticipantIds = []) {
   return api.patch(`/events/${eventId}/complete`, { winnerParticipantIds });
 }
-
-yeah i have
