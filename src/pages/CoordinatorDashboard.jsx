@@ -180,12 +180,16 @@ export default function CoordinatorDashboard() {
   const handleUpdateScore = async (eventId, participantId, scoreStr, teamNoStr) => {
     const score = Number(scoreStr);
   
+    const parsedTeamNo = Number(teamNoStr);
+
     const teamNo =
       teamNoStr !== undefined &&
       teamNoStr !== null &&
-      teamNoStr !== ""
-        ? Number(teamNoStr)
+      teamNoStr !== "" &&
+      !isNaN(parsedTeamNo)
+        ? parsedTeamNo
         : null;
+
   
     if (isNaN(score)) return;
   
