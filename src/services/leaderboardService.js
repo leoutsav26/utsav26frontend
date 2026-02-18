@@ -11,13 +11,9 @@ export async function getLeaderboard(eventId) {
   return Array.isArray(data) ? data : data?.leaderboard ?? [];
 }
 
-export async function setLeaderboardEntry(eventId, participantId, payload) {
-  return api.post(`/leaderboard/${eventId}`, {
-    participantId,
-    payload
-  });
+export async function setLeaderboardEntry(eventId, participantId, payload) { 
+  return api.patch(`/events/${eventId}/leaderboard`, { participantId, ...payload });
 }
-
 
 export async function getWinners(eventId) {
   const data = await api.get(`/events/${eventId}/winners`);
@@ -33,3 +29,5 @@ export async function getScoreEnteredBy(eventId) {
 export async function completeEvent(eventId, winnerParticipantIds = []) {
   return api.patch(`/events/${eventId}/complete`, { winnerParticipantIds });
 }
+
+yeah i have
