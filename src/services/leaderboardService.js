@@ -12,7 +12,10 @@ export async function getLeaderboard(eventId) {
 }
 
 export async function setLeaderboardEntry(eventId, participantId, payload) {
-  return api.patch(`/events/${eventId}/leaderboard`, { participantId, ...payload });
+  return api.post(`/leaderboard/${eventId}`, {
+    participantId,
+    ...payload
+  });
 }
 
 export async function getWinners(eventId) {
