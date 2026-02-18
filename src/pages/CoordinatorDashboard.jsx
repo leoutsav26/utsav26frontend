@@ -41,7 +41,7 @@ export default function CoordinatorDashboard() {
   } = useAppData();
 
   const [selectedEventId, setSelectedEventId] = useState(null);
-  const [editScore, setEditScore] = useState(null); // { eventId, participantId, currentScore }
+  const [editScore, setEditScore] = useState(null); // { eventId, participantId, currentScore, currentTeamNo}
   const [paymentModal, setPaymentModal] = useState(null); // { eventId, participant }
 
   const myActiveIds = (coordActive[user?.id] || []);
