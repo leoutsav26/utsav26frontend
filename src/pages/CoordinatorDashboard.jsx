@@ -143,37 +143,40 @@ export default function CoordinatorDashboard() {
     setPaymentModal(null);
   };
 
-  const handleAddScore = async (eventId, participantId, name, leoId, rollNo, scoreStr) => {
+  const handleAddScore = async (eventId, participantId, name, leoId, rollNo, scoreStr, teamNoStr) => {
     const score = parseFloat(scoreStr);
-    if (isNaN(score)) return;
-
-    if (useApi) {
-      try {
-        await leaderboardService.setLeaderboardEntry(eventId, participantId, { score });
-        if (fetchLeaderboardForEvent) await fetchLeaderboardForEvent(eventId);
-        setEditScore(null);
-      } catch (err) {
-        alert(err?.message || "Failed to save score");
-      }
-      return;
-    }
+    const teamNo = parseInt(teamNoStr);
+  
+    if (isNaN(score) || isNaN(teamNo)) return;
+  
+    await leaderboardService.setLeaderboardEntry(eventId, participantId, {
+      score,
+      teamNo,
+    });
   };
 
-  const handleUpdateScore = async (eventId, participantId, scoreStr) => {
-    const score = parseFloat(scoreStr);
-    if (isNaN(score)) return;
 
+  const handleUpdateScore = async (eventId, participantId, scoreStr, teamNoStr) => {
+    const score = parseFloat(scoreStr);
+    const teamNo = parseInt(teamNoStr);
+  
+    if (isNaN(score) || isNaN(teamNo)) return;
+  
     if (useApi) {
       try {
-        await leaderboardService.setLeaderboardEntry(eventId, participantId, { score });
+        await leaderboardService.setLeaderboardEntry(eventId, participantId, {
+          score,
+          teamNo,
+        });
+  
         if (fetchLeaderboardForEvent) await fetchLeaderboardForEvent(eventId);
         setEditScore(null);
       } catch (err) {
         alert(err?.message || "Failed to update score");
       }
-      return;
     }
   };
+
 
 
   const leaderboardForEvent = (eventId) => (leaderboards[eventId] || []).map((e, i) => ({ ...e, rank: i + 1 }));
@@ -390,6 +393,7 @@ export default function CoordinatorDashboard() {
                       <th>Rank</th>
                       <th>Roll No</th>
                       <th>Name / LEO ID</th>
+                      <th>Team No</th>
                       <th>Score</th>
                       <th>Action</th>
                     </tr>
@@ -400,9 +404,10 @@ export default function CoordinatorDashboard() {
                         <td>{e.rank}</td>
                         <td>{e.rollNo ?? "—"}</td>
                         <td>{e.name} ({e.leoId})</td>
+                        <td>{e.teamNo ?? "—"}</td>
                         <td>{e.score}</td>
                         <td>
-                          <button className="coord-edit-score" onClick={() => setEditScore({ eventId: selectedEventId, participantId: e.participantId, currentScore: e.score })}>Edit</button>
+                          <button className="coord-edit-score" onClick={() => setEditScore({ eventId: selectedEventId, participantId: e.participantId, currentScore: e.score, currentTeamNo: e.teamNo })}>Edit</button>
                         </td>
                       </tr>
                     ))}
@@ -429,15 +434,17 @@ export default function CoordinatorDashboard() {
                       <div key={p.studentId} className="coord-score-row">
                         <span>{p.rollNo ? `${p.rollNo} · ` : ""}{p.name} ({p.leoId})</span>
                         {isEditing ? (
-                          <form onSubmit={(ev) => { ev.preventDefault(); handleUpdateScore(selectedEventId, p.studentId, ev.target.score.value); }} style={{ display: "flex", gap: 8 }}>
-                            <input name="score" type="number" step="any" defaultValue={editScore?.currentScore} />
+                          <form onSubmit={(ev) => { ev.preventDefault(); handleUpdateScore(selectedEventId, p.studentId, ev.target.score.value, ev.target.teamNo.value); }} style={{ display: "flex", gap: 8 }}>
+                            <input name="teamNo" type="number" placeholder="Team No" required />
+                            <input name="score" type="number" step="any" placeholder="Score" required />
                             <button type="submit">Update</button>
                             <button type="button" onClick={() => setEditScore(null)}>Cancel</button>
                           </form>
                         ) : existing ? (
                           <button onClick={() => setEditScore({ eventId: selectedEventId, participantId: p.studentId, currentScore: existing.score })}>Modify score</button>
                         ) : (
-                          <form onSubmit={(ev) => { ev.preventDefault(); handleAddScore(selectedEventId, p.studentId, p.name, p.leoId, p.rollNo, ev.target.score.value); }} style={{ display: "flex", gap: 8 }}>
+                          <form onSubmit={(ev) => { ev.preventDefault(); handleAddScore(selectedEventId, p.studentId, p.name, p.leoId, p.rollNo, ev.target.score.value, ev.target.teamNo.value); }} style={{ display: "flex", gap: 8 }}>
+                            <input name="teamNo" type="number" placeholder="Team No" required />
                             <input name="score" type="number" step="any" placeholder="Score" required />
                             <button type="submit">Add score</button>
                           </form>
